@@ -1,4 +1,3 @@
-// src/api/classApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
@@ -9,7 +8,6 @@ export const classApi = createApi({
     baseUrl: `${BACKEND_URL}/api/class`,
     credentials: "include",
     prepareHeaders: (headers, { getState }) => {
-      // ✅ FIX: redux token OR localStorage token (refresh safe)
       const reduxToken = getState()?.auth?.token;
       const storageToken = localStorage.getItem("token");
       const token = reduxToken || storageToken;
@@ -21,7 +19,6 @@ export const classApi = createApi({
   }),
   tagTypes: ["Class"],
   endpoints: (builder) => ({
-    // GET /api/class
     getAllClasses: builder.query({
       query: () => `/`,
       providesTags: (result) =>
@@ -33,13 +30,11 @@ export const classApi = createApi({
           : [{ type: "Class", id: "LIST" }],
     }),
 
-    // GET /api/class/:classId
     getClassById: builder.query({
       query: (classId) => `/${classId}`,
       providesTags: (result, error, classId) => [{ type: "Class", id: classId }],
     }),
 
-    // POST /api/class
     createClass: builder.mutation({
       query: (body) => ({
         url: `/`,
@@ -49,7 +44,6 @@ export const classApi = createApi({
       invalidatesTags: [{ type: "Class", id: "LIST" }],
     }),
 
-    // PATCH /api/class/:classId
     updateClass: builder.mutation({
       query: ({ classId, body }) => ({
         url: `/${classId}`,
@@ -62,7 +56,6 @@ export const classApi = createApi({
       ],
     }),
 
-    // DELETE /api/class/:classId
     deleteClass: builder.mutation({
       query: (classId) => ({
         url: `/${classId}`,

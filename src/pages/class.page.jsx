@@ -1,4 +1,3 @@
-// src/pages/class.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -46,7 +45,23 @@ const ClassPage = () => {
   const action = searchParams.get("action"); // create | view | update | null
   const classId = searchParams.get("classId");
 
-  const goList = () => navigate("/lms/class", { replace: true });
+  // ✅ always navigate using pathname+search (more reliable than string)
+  const goList = () => navigate({ pathname: "/lms/class", search: "" }, { replace: true });
+
+  const openCreate = () =>
+    navigate({ pathname: "/lms/class", search: "?action=create" });
+
+  const openView = (id) =>
+    navigate({
+      pathname: "/lms/class",
+      search: `?action=view&classId=${encodeURIComponent(id)}`,
+    });
+
+  const openUpdate = (id) =>
+    navigate({
+      pathname: "/lms/class",
+      search: `?action=update&classId=${encodeURIComponent(id)}`,
+    });
 
   // ======= class list =======
   const { data, isLoading, isError } = useGetAllClassesQuery();
@@ -56,13 +71,15 @@ const ClassPage = () => {
   const [createClass, { isLoading: isCreating }] = useCreateClassMutation();
   const [updateClass, { isLoading: isUpdating }] = useUpdateClassMutation();
 
-  // ======= view/update details =======
+  // ✅ only call details when view/update AND classId exists
+  const shouldLoadDetails = (action === "view" || action === "update") && !!classId;
+
   const {
     data: classRes,
     isLoading: classLoading,
     isError: classError,
   } = useGetClassByIdQuery(classId, {
-    skip: !(action === "view" || action === "update") || !classId,
+    skip: !shouldLoadDetails,
   });
 
   // ======= grades + subjects =======
@@ -87,12 +104,10 @@ const ClassPage = () => {
   const allGrades = gradesRes?.grades || [];
   const teachers = teachersRes?.teachers || [];
 
-  // ✅ ONLY GRADES 1-11 in create/update
   const grades = useMemo(() => {
     return allGrades.filter((g) => Number(g?.grade) >= 1 && Number(g?.grade) <= 11);
   }, [allGrades]);
 
-  // ======= table rows =======
   const rows = useMemo(() => {
     const list = data?.classes || [];
     return list.map((c) => {
@@ -111,9 +126,32 @@ const ClassPage = () => {
         teacherName,
         createdDate,
         createdTime,
+        imageUrl: c.imageUrl || "",
       };
     });
   }, [data]);
+
+  // ======= upload state =======
+  const [uploading, setUploading] = useState(false);
+
+  const uploadClassImage = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const token = localStorage.getItem("token") || "";
+
+    const res = await fetch(`${BACKEND_URL}/api/upload/class-image`, {
+      method: "POST",
+      headers: { Authorization: token ? `Bearer ${token}` : "" },
+      body: formData,
+      credentials: "include",
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.message || "Upload failed");
+    return json; // { url, publicId }
+  };
 
   // ======= form =======
   const [form, setForm] = useState({
@@ -121,6 +159,8 @@ const ClassPage = () => {
     gradeId: "",
     subjectId: "",
     teacherIds: [],
+    imageUrl: "",
+    imagePublicId: "",
   });
 
   const selectedGrade = useMemo(() => {
@@ -140,10 +180,18 @@ const ClassPage = () => {
 
   useEffect(() => {
     if (action === "create") {
-      setForm({ className: "", gradeId: "", subjectId: "", teacherIds: [] });
+      setForm({
+        className: "",
+        gradeId: "",
+        subjectId: "",
+        teacherIds: [],
+        imageUrl: "",
+        imagePublicId: "",
+      });
     }
   }, [action]);
 
+  // ✅ prefill when update opens
   useEffect(() => {
     if (action !== "update") return;
     const c = classRes?.class;
@@ -154,6 +202,8 @@ const ClassPage = () => {
       gradeId: c?.gradeId?._id || c?.gradeId || "",
       subjectId: c?.subjectId || "",
       teacherIds: (c?.teacherIds || []).map((t) => t?._id).filter(Boolean),
+      imageUrl: c?.imageUrl || "",
+      imagePublicId: c?.imagePublicId || "",
     });
   }, [action, classRes]);
 
@@ -171,7 +221,6 @@ const ClassPage = () => {
       alert("className, grade, subject are required");
       return;
     }
-    // ✅ teacher required
     if (!form.teacherIds || form.teacherIds.length === 0) {
       alert("Please select at least one teacher");
       return;
@@ -183,6 +232,8 @@ const ClassPage = () => {
         gradeId: form.gradeId,
         subjectId: form.subjectId,
         teacherIds: form.teacherIds || [],
+        imageUrl: form.imageUrl,
+        imagePublicId: form.imagePublicId,
       }).unwrap();
       goList();
     } catch (e) {
@@ -196,7 +247,6 @@ const ClassPage = () => {
       alert("className, grade, subject are required");
       return;
     }
-    // ✅ teacher required
     if (!form.teacherIds || form.teacherIds.length === 0) {
       alert("Please select at least one teacher");
       return;
@@ -210,6 +260,8 @@ const ClassPage = () => {
           gradeId: form.gradeId,
           subjectId: form.subjectId,
           teacherIds: form.teacherIds || [],
+          imageUrl: form.imageUrl,
+          imagePublicId: form.imagePublicId,
         },
       }).unwrap();
       goList();
@@ -218,9 +270,81 @@ const ClassPage = () => {
     }
   };
 
-  const openCreate = () => navigate("/lms/class?action=create");
-  const openView = (id) => navigate(`/lms/class?action=view&classId=${id}`);
-  const openUpdate = (id) => navigate(`/lms/class?action=update&classId=${id}`);
+  const ImageUploader = ({ inputId }) => {
+    const onPickFile = async (file) => {
+      if (!file) return;
+      if (!file.type?.startsWith("image/")) {
+        alert("Only image files allowed");
+        return;
+      }
+
+      try {
+        setUploading(true);
+        const up = await uploadClassImage(file);
+
+        setForm((p) => ({
+          ...p,
+          imageUrl: up.url || "",
+          imagePublicId: up.publicId || "",
+        }));
+      } catch (err) {
+        alert(err?.message || "Upload failed");
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    return (
+      <div>
+        <label className="block text-sm font-extrabold text-gray-800">
+          Class Image (Drag & Drop)
+        </label>
+
+        <div
+          className="mt-2 w-full rounded-xl border-2 border-dashed border-gray-300 p-4 text-center cursor-pointer hover:border-blue-400"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files?.[0];
+            onPickFile(file);
+          }}
+          onClick={() => document.getElementById(inputId)?.click()}
+        >
+          <div className="text-sm font-bold text-gray-700">
+            {uploading ? "Uploading..." : "Drop image here or click to upload"}
+          </div>
+
+          {form.imageUrl ? (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <img
+                src={form.imageUrl}
+                alt="preview"
+                className="w-16 h-16 rounded-lg object-cover border"
+              />
+              <div className="text-left">
+                <div className="text-[11px] font-bold text-gray-700">Uploaded</div>
+                <div className="text-[10px] text-gray-500 break-all max-w-[320px]">
+                  {form.imageUrl}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            onPickFile(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="w-full flex justify-center">
@@ -238,127 +362,6 @@ const ClassPage = () => {
             + Add Class
           </button>
         </div>
-
-        {/* CREATE MODAL */}
-        {action === "create" && (
-          <ModalShell title="Create Class" onClose={goList}>
-            {gradesLoading || teachersLoading ? (
-              <div className="text-gray-500 font-bold">Loading...</div>
-            ) : gradesError ? (
-              <div className="text-red-600 font-bold">Failed to load grades</div>
-            ) : teachersError ? (
-              <div className="text-red-600 font-bold">Failed to load teachers</div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
-                    Class Name
-                  </label>
-                  <input
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
-                    value={form.className}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, className: e.target.value }))
-                    }
-                    placeholder="Enter class name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
-                    Grade
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
-                    value={form.gradeId}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        gradeId: e.target.value,
-                        subjectId: "",
-                      }))
-                    }
-                  >
-                    <option value="">Select Grade</option>
-                    {grades.map((g) => (
-                      <option key={g._id} value={g._id}>
-                        Grade {g.grade}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
-                    Subject
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
-                    value={form.subjectId}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, subjectId: e.target.value }))
-                    }
-                    disabled={!form.gradeId}
-                  >
-                    <option value="">
-                      {form.gradeId ? "Select Subject" : "Select grade first"}
-                    </option>
-                    {subjects.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.subject}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
-                    Teachers
-                  </label>
-                  <select
-                    multiple
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 min-h-[120px]"
-                    value={form.teacherIds}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions).map(
-                        (o) => o.value
-                      );
-                      setForm((p) => ({ ...p, teacherIds: values }));
-                    }}
-                  >
-                    {teachers.map((t) => (
-                      <option key={t._id} value={t._id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mt-1 text-[11px] text-gray-500 font-bold">
-                    (Hold Ctrl / Cmd to select multiple)
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg bg-gray-700 px-4 py-2 text-white text-sm font-extrabold hover:bg-gray-800"
-                    onClick={goList}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-green-700"
-                    onClick={submitCreate}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? "Creating..." : "Create"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </ModalShell>
-        )}
 
         {/* VIEW MODAL */}
         {action === "view" && (
@@ -402,6 +405,29 @@ const ClassPage = () => {
                       .filter(Boolean)
                       .join(", ") || "No Teacher"}
                   </span>
+                </div>
+
+                <div className="font-extrabold text-gray-800">
+                  Image:{" "}
+                  {classRes?.class?.imageUrl ? (
+                    <div className="mt-2 flex items-center gap-3">
+                      <img
+                        src={classRes.class.imageUrl}
+                        alt="class"
+                        className="w-16 h-16 rounded-lg object-cover border"
+                      />
+                      <a
+                        href={classRes.class.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-blue-700 underline break-all"
+                      >
+                        {classRes.class.imageUrl}
+                      </a>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No image</span>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -519,6 +545,8 @@ const ClassPage = () => {
                   </div>
                 </div>
 
+                <ImageUploader inputId="class-image-input-update" />
+
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
@@ -532,9 +560,130 @@ const ClassPage = () => {
                     type="button"
                     className="rounded-lg bg-blue-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-blue-700"
                     onClick={submitUpdate}
-                    disabled={isUpdating}
+                    disabled={isUpdating || uploading}
                   >
-                    {isUpdating ? "Updating..." : "Update"}
+                    {uploading ? "Uploading..." : isUpdating ? "Updating..." : "Update"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </ModalShell>
+        )}
+
+        {/* CREATE MODAL */}
+        {action === "create" && (
+          <ModalShell title="Create Class" onClose={goList}>
+            {gradesLoading || teachersLoading ? (
+              <div className="text-gray-500 font-bold">Loading...</div>
+            ) : gradesError ? (
+              <div className="text-red-600 font-bold">Failed to load grades</div>
+            ) : teachersError ? (
+              <div className="text-red-600 font-bold">Failed to load teachers</div>
+            ) : (
+              <div className="space-y-4">
+                {/* same create form as before */}
+                <div>
+                  <label className="block text-sm font-extrabold text-gray-800">
+                    Class Name
+                  </label>
+                  <input
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    value={form.className}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, className: e.target.value }))
+                    }
+                    placeholder="Enter class name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-extrabold text-gray-800">
+                    Grade
+                  </label>
+                  <select
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    value={form.gradeId}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        gradeId: e.target.value,
+                        subjectId: "",
+                      }))
+                    }
+                  >
+                    <option value="">Select Grade</option>
+                    {grades.map((g) => (
+                      <option key={g._id} value={g._id}>
+                        Grade {g.grade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-extrabold text-gray-800">
+                    Subject
+                  </label>
+                  <select
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    value={form.subjectId}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, subjectId: e.target.value }))
+                    }
+                    disabled={!form.gradeId}
+                  >
+                    <option value="">
+                      {form.gradeId ? "Select Subject" : "Select grade first"}
+                    </option>
+                    {subjects.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.subject}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-extrabold text-gray-800">
+                    Teachers
+                  </label>
+                  <select
+                    multiple
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 min-h-[120px]"
+                    value={form.teacherIds}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions).map(
+                        (o) => o.value
+                      );
+                      setForm((p) => ({ ...p, teacherIds: values }));
+                    }}
+                  >
+                    {teachers.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <ImageUploader inputId="class-image-input-create" />
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-gray-700 px-4 py-2 text-white text-sm font-extrabold hover:bg-gray-800"
+                    onClick={goList}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-green-700"
+                    onClick={submitCreate}
+                    disabled={isCreating || uploading}
+                  >
+                    {uploading ? "Uploading..." : isCreating ? "Creating..." : "Create"}
                   </button>
                 </div>
               </div>
@@ -547,32 +696,33 @@ const ClassPage = () => {
           <table className="w-full table-fixed">
             <thead>
               <tr className="bg-gray-100 text-gray-800 text-sm">
-                <th className="p-3 text-left w-[18%]">Class Name</th>
-                <th className="p-3 text-left w-[12%]">Grade</th>
-                <th className="p-3 text-left w-[16%]">Subject</th>
-                <th className="p-3 text-left w-[18%]">Teacher Name</th>
+                <th className="p-3 text-left w-[16%]">Class Name</th>
+                <th className="p-3 text-left w-[10%]">Grade</th>
+                <th className="p-3 text-left w-[14%]">Subject</th>
+                <th className="p-3 text-left w-[16%]">Teacher Name</th>
+                <th className="p-3 text-left w-[16%]">Image</th>
                 <th className="p-3 text-left w-[12%]">Created Date</th>
                 <th className="p-3 text-left w-[8%]">Time</th>
-                <th className="p-3 text-center w-[16%]">Operation</th>
+                <th className="p-3 text-center w-[8%]">Operation</th>
               </tr>
             </thead>
 
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">
+                  <td colSpan={8} className="p-6 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-red-600">
+                  <td colSpan={8} className="p-6 text-center text-red-600">
                     Failed to load classes
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">
+                  <td colSpan={8} className="p-6 text-center text-gray-500">
                     No class records found
                   </td>
                 </tr>
@@ -583,6 +733,21 @@ const ClassPage = () => {
                     <td className="p-3 truncate">{r.grade}</td>
                     <td className="p-3 truncate">{r.subject}</td>
                     <td className="p-3 truncate">{r.teacherName}</td>
+
+                    <td className="p-3">
+                      {r.imageUrl ? (
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={r.imageUrl}
+                            alt="class"
+                            className="w-10 h-10 rounded-lg object-cover border"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No image</span>
+                      )}
+                    </td>
+
                     <td className="p-3 truncate">{r.createdDate}</td>
                     <td className="p-3 truncate">{r.createdTime}</td>
 
