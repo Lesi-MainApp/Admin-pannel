@@ -122,26 +122,6 @@ const PermissonTeachers = () => {
                       </span>
                     </div>
 
-                    {/* details */}
-                    <div className="mt-3 text-sm text-gray-700 space-y-1">
-                      <div>
-                        <span className="font-bold">District:</span> {t.district || "-"}
-                      </div>
-                      <div>
-                        <span className="font-bold">Town:</span> {t.town || "-"}
-                      </div>
-                      <div>
-                        <span className="font-bold">Address:</span> {t.address || "-"}
-                      </div>
-                      <div>
-                        <span className="font-bold">Verified:</span> {t.isVerified ? "Yes" : "No"}
-                      </div>
-                      <div>
-                        <span className="font-bold">Created:</span>{" "}
-                        {t.createdAt ? new Date(t.createdAt).toLocaleString() : "-"}
-                      </div>
-                    </div>
-
                     {/* ✅ footer pinned bottom */}
                     <div className="mt-auto pt-4 flex justify-end gap-2">
                       <button

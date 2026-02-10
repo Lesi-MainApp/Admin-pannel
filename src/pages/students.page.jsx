@@ -5,7 +5,6 @@ const StudentsPage = () => {
   const [status, setStatus] = useState("");
   const [regNo, setRegNo] = useState("");
   const [completePapers, setCompletePapers] = useState("");
-
   const [district, setDistrict] = useState("");
   const [town, setTown] = useState("");
   const [subject, setSubject] = useState("");
@@ -65,7 +64,7 @@ const StudentsPage = () => {
     []
   );
 
-  // ---- basic filtering ----
+  // ---- filtering ----
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       if (status && r.status !== status) return false;
@@ -78,9 +77,7 @@ const StudentsPage = () => {
     });
   }, [rows, status, regNo, completePapers, district, town, subject]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-  };
+  const handleSearch = (e) => e.preventDefault();
 
   const handleReset = () => {
     setStatus("");
@@ -110,9 +107,7 @@ const StudentsPage = () => {
   );
 
   const Th = ({ children, className = "" }) => (
-    <th
-      className={`p-2 text-left text-[12px] font-bold text-gray-800 ${className}`}
-    >
+    <th className={`p-2 text-left text-[12px] font-bold text-gray-800 ${className}`}>
       {children}
     </th>
   );
@@ -125,13 +120,12 @@ const StudentsPage = () => {
 
   return (
     <div className="w-full flex justify-center">
-      {/* ✅ ONLY THIS LINE CHANGED: max-w-7xl -> max-w-[95vw] */}
       <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
           Students
         </h1>
 
-        {/* FILTER BOX (UNCHANGED) */}
+        {/* FILTER */}
         <form
           onSubmit={handleSearch}
           className="mt-5 bg-white rounded-2xl shadow-sm border border-gray-200 p-4"
@@ -139,51 +133,15 @@ const StudentsPage = () => {
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 min-w-0">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Select
-                  label="Status"
-                  value={status}
-                  onChange={setStatus}
-                  options={statusOptions}
-                  placeholder="Select"
-                />
-                <Select
-                  label="RegNo"
-                  value={regNo}
-                  onChange={setRegNo}
-                  options={regNoOptions}
-                  placeholder="Select"
-                />
-                <Select
-                  label="Complete Papers"
-                  value={completePapers}
-                  onChange={setCompletePapers}
-                  options={completePapersOptions}
-                  placeholder="Select"
-                />
+                <Select label="Status" value={status} onChange={setStatus} options={statusOptions} placeholder="Select" />
+                <Select label="RegNo" value={regNo} onChange={setRegNo} options={regNoOptions} placeholder="Select" />
+                <Select label="Complete Papers" value={completePapers} onChange={setCompletePapers} options={completePapersOptions} placeholder="Select" />
               </div>
 
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Select
-                  label="District"
-                  value={district}
-                  onChange={setDistrict}
-                  options={districtOptions}
-                  placeholder="Select"
-                />
-                <Select
-                  label="Town"
-                  value={town}
-                  onChange={setTown}
-                  options={townOptions}
-                  placeholder="Select"
-                />
-                <Select
-                  label="Subjects"
-                  value={subject}
-                  onChange={setSubject}
-                  options={subjectOptions}
-                  placeholder="Select"
-                />
+                <Select label="District" value={district} onChange={setDistrict} options={districtOptions} placeholder="Select" />
+                <Select label="Town" value={town} onChange={setTown} options={townOptions} placeholder="Select" />
+                <Select label="Subjects" value={subject} onChange={setSubject} options={subjectOptions} placeholder="Select" />
               </div>
             </div>
 
@@ -206,7 +164,7 @@ const StudentsPage = () => {
           </div>
         </form>
 
-        {/* TABLE (NO HORIZONTAL SCROLL) */}
+        {/* TABLE */}
         <div className="mt-4 w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <table className="w-full table-fixed">
             <thead>

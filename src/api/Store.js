@@ -22,6 +22,8 @@ import { lessonApi } from "./lessonApi";
 // ✅ NEW LIVE
 import liveUiReducer from "./features/liveSlice";
 import { liveApi } from "./liveApi";
+import enrollUiReducer from "./features/enrollSlice";
+import { enrollApi } from "./enrollApi";
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +32,7 @@ export const store = configureStore({
     teacher: teacherReducer,
     classUi: classUiReducer,
     lessonUi: lessonUiReducer,
+    enrollUi: enrollUiReducer,
 
     // ✅ NEW
     liveUi: liveUiReducer,
@@ -40,7 +43,7 @@ export const store = configureStore({
     [classApi.reducerPath]: classApi.reducer,
     [teacherAssignmentApi.reducerPath]: teacherAssignmentApi.reducer,
     [lessonApi.reducerPath]: lessonApi.reducer,
-
+    [enrollApi.reducerPath]: enrollApi.reducer,
     // ✅ NEW
     [liveApi.reducerPath]: liveApi.reducer,
   },
@@ -52,7 +55,7 @@ export const store = configureStore({
       classApi.middleware,
       teacherAssignmentApi.middleware,
       lessonApi.middleware,
-
+      enrollApi.middleware,
       // ✅ NEW
       liveApi.middleware
     ),

@@ -7,46 +7,75 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { store } from "./api/Store";
 import "./index.css";
 
+// auth pages
 import SignUpPage from "./pages/signup.page";
 import SignInPage from "./pages/signin.page";
 import OTPPage from "./pages/OTP.page";
 import ForgotPassword from "./pages/Forgotpassword";
-import HomePage from "./pages/home.page";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
+// main pages
+import HomePage from "./pages/home.page";
+import GradeSubjectPage from "./pages/Grade.Subject.page";
+
+// paper module
 import PaperLayout from "./layout/PaperLayout";
 import PapersPage from "./pages/papers.page";
 import ViewPaperPage from "./pages/ViewPaperPage";
 
+// teacher module
 import TeacherLayout from "./layout/TeacherLayout";
 import TeacherPage from "./pages/Teacher.page";
 import ViewTeacherPage from "./pages/ViewTeacher.page";
 import PermissonTeachers from "./pages/PermissionTeachers";
 
-import StudentsPage from "./pages/Students.page";
-import GradeSubjectPage from "./pages/Grade.Subject.page";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
+// ✅ student module (NEW)
+import StudentLayout from "./layout/StudentLayout";
+import StudentsPage from "./pages/students.page";
+import PermissionStudents from "./pages/PermissionStudents";
 
+// lms module
 import LMSLayout from "./layout/LMSLayout";
-import ClassPage from "./pages/class.page";
 import LMSPage from "./pages/lms.page";
+import ClassPage from "./pages/class.page";
 import LivePage from "./pages/Live.page";
 
+// route guards
 import AdminRoute from "./compoments/AdminRoute";
 import ProtectedRoute from "./compoments/ProtectedRoute";
+
+const ViewStudentPlaceholder = () => {
+  return (
+    <div className="w-full flex justify-center">
+      <div className="w-full max-w-[95vw] bg-white rounded-2xl border border-gray-200 p-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
+          View Student
+        </h1>
+        <div className="text-center text-gray-500 mt-4">
+          Design page (connect later)
+        </div>
+      </div>
+    </div>
+  );
+};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
         <Routes>
-          {/* auth */}
+          {/* =========================
+              AUTH ROUTES
+          ========================== */}
           <Route path="/" element={<SignUpPage />} />
           <Route path="/otp" element={<OTPPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* home */}
+          {/* =========================
+              HOME
+          ========================== */}
           <Route
             path="/home"
             element={
@@ -56,7 +85,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             }
           />
 
-          {/* grade-subject */}
+          {/* =========================
+              GRADE-SUBJECT
+          ========================== */}
           <Route
             path="/grade-subject"
             element={
@@ -66,17 +97,32 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             }
           />
 
-          {/* student */}
+          {/* =========================
+              STUDENT MODULE (NEW)
+          ========================== */}
           <Route
             path="/student"
             element={
               <ProtectedRoute>
-                <StudentsPage />
+                <StudentLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Navigate to="/student/list" replace />} />
+            <Route path="list" element={<StudentsPage />} />
+            <Route
+              path="permission"
+              element={
+                <AdminRoute>
+                  <PermissionStudents />
+                </AdminRoute>
+              }
+            />
+          </Route>
 
-          {/* paper */}
+          {/* =========================
+              PAPER MODULE
+          ========================== */}
           <Route
             path="/paper"
             element={
@@ -90,7 +136,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="view" element={<ViewPaperPage />} />
           </Route>
 
-          {/* teacher */}
+          {/* =========================
+              TEACHER MODULE
+          ========================== */}
           <Route
             path="/teacher"
             element={
@@ -112,7 +160,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-          {/* ✅ LMS (Protected) */}
+          {/* =========================
+              LMS MODULE
+          ========================== */}
           <Route
             path="/lms"
             element={
@@ -134,7 +184,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             />
 
-            {/* ✅ Admin-only Live (FIXED: inside /lms) */}
+            {/* ✅ Admin-only Live */}
             <Route
               path="live"
               element={
@@ -145,7 +195,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-          {/* fallback */}
+          {/* =========================
+              FALLBACK
+          ========================== */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
