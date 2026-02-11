@@ -1,4 +1,3 @@
-// src/api/store.js
 import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 
@@ -22,8 +21,13 @@ import { lessonApi } from "./lessonApi";
 // ✅ NEW LIVE
 import liveUiReducer from "./features/liveSlice";
 import { liveApi } from "./liveApi";
+
 import enrollUiReducer from "./features/enrollSlice";
 import { enrollApi } from "./enrollApi";
+
+// ✅ PAPER
+import paperReducer from "./features/paperSlice";
+import { paperApi } from "./paperApi";
 
 export const store = configureStore({
   reducer: {
@@ -33,9 +37,10 @@ export const store = configureStore({
     classUi: classUiReducer,
     lessonUi: lessonUiReducer,
     enrollUi: enrollUiReducer,
-
-    // ✅ NEW
     liveUi: liveUiReducer,
+
+    // ✅ PAPER
+    paper: paperReducer,
 
     [authApi.reducerPath]: authApi.reducer,
     [gradeSubjectApi.reducerPath]: gradeSubjectApi.reducer,
@@ -44,8 +49,10 @@ export const store = configureStore({
     [teacherAssignmentApi.reducerPath]: teacherAssignmentApi.reducer,
     [lessonApi.reducerPath]: lessonApi.reducer,
     [enrollApi.reducerPath]: enrollApi.reducer,
-    // ✅ NEW
     [liveApi.reducerPath]: liveApi.reducer,
+
+    // ✅ PAPER
+    [paperApi.reducerPath]: paperApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -56,8 +63,10 @@ export const store = configureStore({
       teacherAssignmentApi.middleware,
       lessonApi.middleware,
       enrollApi.middleware,
-      // ✅ NEW
-      liveApi.middleware
+      liveApi.middleware,
+
+      // ✅ PAPER
+      paperApi.middleware
     ),
 });
 

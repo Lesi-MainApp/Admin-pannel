@@ -22,6 +22,7 @@ import GradeSubjectPage from "./pages/Grade.Subject.page";
 import PaperLayout from "./layout/PaperLayout";
 import PapersPage from "./pages/papers.page";
 import ViewPaperPage from "./pages/ViewPaperPage";
+import QuestionPage from "./pages/Quesion.page";
 
 // teacher module
 import TeacherLayout from "./layout/TeacherLayout";
@@ -29,7 +30,7 @@ import TeacherPage from "./pages/Teacher.page";
 import ViewTeacherPage from "./pages/ViewTeacher.page";
 import PermissonTeachers from "./pages/PermissionTeachers";
 
-// ✅ student module (NEW)
+// ✅ student module
 import StudentLayout from "./layout/StudentLayout";
 import StudentsPage from "./pages/students.page";
 import PermissionStudents from "./pages/PermissionStudents";
@@ -43,21 +44,6 @@ import LivePage from "./pages/Live.page";
 // route guards
 import AdminRoute from "./compoments/AdminRoute";
 import ProtectedRoute from "./compoments/ProtectedRoute";
-
-const ViewStudentPlaceholder = () => {
-  return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[95vw] bg-white rounded-2xl border border-gray-200 p-6">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
-          View Student
-        </h1>
-        <div className="text-center text-gray-500 mt-4">
-          Design page (connect later)
-        </div>
-      </div>
-    </div>
-  );
-};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -98,7 +84,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           />
 
           {/* =========================
-              STUDENT MODULE (NEW)
+              STUDENT MODULE
           ========================== */}
           <Route
             path="/student"
@@ -122,6 +108,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
           {/* =========================
               PAPER MODULE
+              ✅ Question page: NO admin access (but still needs login)
           ========================== */}
           <Route
             path="/paper"
@@ -134,6 +121,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={<Navigate to="/paper/papers" replace />} />
             <Route path="papers" element={<PapersPage />} />
             <Route path="view" element={<ViewPaperPage />} />
+
+            {/* ✅ anyone logged-in can access */}
+            <Route path="question" element={<QuestionPage />} />
           </Route>
 
           {/* =========================
@@ -174,7 +164,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={<Navigate to="/lms/list" replace />} />
             <Route path="list" element={<LMSPage />} />
 
-            {/* ✅ Admin-only Class */}
             <Route
               path="class"
               element={
@@ -184,7 +173,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             />
 
-            {/* ✅ Admin-only Live */}
             <Route
               path="live"
               element={

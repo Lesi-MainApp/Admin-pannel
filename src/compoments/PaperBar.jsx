@@ -1,11 +1,13 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaBookOpen, FaEye } from "react-icons/fa";
+import { FaBookOpen, FaEye, FaQuestionCircle } from "react-icons/fa";
 
 const PaperBar = () => {
   const menuItemsTop = [
     { icon: FaBookOpen, label: "Papers", path: "/paper/papers" },
     { icon: FaEye, label: "View Paper", path: "/paper/view" },
+    // ✅ NEW: Question
+    { icon: FaQuestionCircle, label: "Question", path: "/paper/question" },
   ];
 
   return (
@@ -21,9 +23,7 @@ const PaperBar = () => {
                 to={item.path}
                 className={({ isActive }) =>
                   `flex flex-col items-center transition ${
-                    isActive
-                      ? "text-blue-600"
-                      : "text-gray-700 hover:text-blue-600"
+                    isActive ? "text-blue-600" : "text-gray-700 hover:text-blue-600"
                   }`
                 }
               >
