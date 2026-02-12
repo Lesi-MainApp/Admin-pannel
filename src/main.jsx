@@ -1,4 +1,3 @@
-// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
@@ -23,6 +22,8 @@ import PaperLayout from "./layout/PaperLayout";
 import PapersPage from "./pages/papers.page";
 import ViewPaperPage from "./pages/ViewPaperPage";
 import QuestionPage from "./pages/Quesion.page";
+import CreatePaperQuestionsPage from "./compoments/CreateQuestionCard";
+import ViewPaperQuestionsPage from "./pages/ViewPaperQuestionsPage";
 
 // teacher module
 import TeacherLayout from "./layout/TeacherLayout";
@@ -30,7 +31,7 @@ import TeacherPage from "./pages/Teacher.page";
 import ViewTeacherPage from "./pages/ViewTeacher.page";
 import PermissonTeachers from "./pages/PermissionTeachers";
 
-// ✅ student module
+// student module
 import StudentLayout from "./layout/StudentLayout";
 import StudentsPage from "./pages/students.page";
 import PermissionStudents from "./pages/PermissionStudents";
@@ -50,18 +51,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <Provider store={store}>
       <BrowserRouter>
         <Routes>
-          {/* =========================
-              AUTH ROUTES
-          ========================== */}
           <Route path="/" element={<SignUpPage />} />
           <Route path="/otp" element={<OTPPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* =========================
-              HOME
-          ========================== */}
           <Route
             path="/home"
             element={
@@ -71,9 +66,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             }
           />
 
-          {/* =========================
-              GRADE-SUBJECT
-          ========================== */}
           <Route
             path="/grade-subject"
             element={
@@ -83,9 +75,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             }
           />
 
-          {/* =========================
-              STUDENT MODULE
-          ========================== */}
           <Route
             path="/student"
             element={
@@ -106,10 +95,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-          {/* =========================
-              PAPER MODULE
-              ✅ Question page: NO admin access (but still needs login)
-          ========================== */}
           <Route
             path="/paper"
             element={
@@ -121,14 +106,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={<Navigate to="/paper/papers" replace />} />
             <Route path="papers" element={<PapersPage />} />
             <Route path="view" element={<ViewPaperPage />} />
-
-            {/* ✅ anyone logged-in can access */}
+            <Route path=":paperId/questions/create" element={<CreatePaperQuestionsPage />} />
+            <Route path=":paperId/questions/view" element={<ViewPaperQuestionsPage />} />
             <Route path="question" element={<QuestionPage />} />
           </Route>
 
-          {/* =========================
-              TEACHER MODULE
-          ========================== */}
           <Route
             path="/teacher"
             element={
@@ -150,9 +132,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-          {/* =========================
-              LMS MODULE
-          ========================== */}
           <Route
             path="/lms"
             element={
@@ -163,7 +142,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           >
             <Route index element={<Navigate to="/lms/list" replace />} />
             <Route path="list" element={<LMSPage />} />
-
             <Route
               path="class"
               element={
@@ -172,7 +150,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 </AdminRoute>
               }
             />
-
             <Route
               path="live"
               element={
@@ -183,9 +160,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-          {/* =========================
-              FALLBACK
-          ========================== */}
+         
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

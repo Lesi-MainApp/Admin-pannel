@@ -1,160 +1,372 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  useGetQuestionsByPaperQuery,
+  useCreateQuestionMutation,
+} from "../api/questionApi";
+import { useUploadQuestionImageMutation } from "../api/uploadApi";
 
-/**
- * Props:
- * - answerCount (number) default 5
- * - onNext(payload) => void
- */
-export default function CreateQuestionCard({ answerCount = 5, onNext }) {
-  const [question, setQuestion] = useState("");
-  const [answers, setAnswers] = useState(() => Array(answerCount).fill(""));
-  const [correctIndexes, setCorrectIndexes] = useState([]); // ✅ allow 1 or 2
-  const [explanationVideoUrl, setExplanationVideoUrl] = useState("");
-  const [writtenLogic, setWrittenLogic] = useState("");
+const norm = (v) => String(v || "").trim();
 
-  const canSubmit = useMemo(() => {
-    const cleanedAnswers = answers.map((a) => String(a || "").trim()).filter(Boolean);
-    return (
-      String(question || "").trim().length > 0 &&
-      cleanedAnswers.length === answerCount &&
-      correctIndexes.length >= 1 &&
-      correctIndexes.length <= 2
-    );
-  }, [question, answers, correctIndexes, answerCount]);
+const Dropzone = ({ onFile }) => {
+  const [drag, setDrag] = useState(false);
 
-  const toggleCorrect = (idx) => {
-    setCorrectIndexes((prev) => {
-      if (prev.includes(idx)) return prev.filter((x) => x !== idx);
-      if (prev.length >= 2) return prev; // max 2
-      return [...prev, idx].sort((a, b) => a - b);
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDrag(true);
+      }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDrag(false);
+        const f = e.dataTransfer.files?.[0];
+        if (f) onFile?.(f);
+      }}
+      className={[
+        "w-full rounded-xl border border-dashed px-4 py-4 text-sm",
+        drag ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50",
+      ].join(" ")}
+    >
+      <div className="font-semibold text-gray-800">Drag & drop image here</div>
+      <div className="text-xs text-gray-600 mt-1">or choose file</div>
+      <input
+        type="file"
+        accept="image/*"
+        className="mt-2"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile?.(f);
+        }}
+      />
+    </div>
+  );
+};
+
+export default function CreatePaperQuestionsPage() {
+  const { paperId } = useParams();
+  const navigate = useNavigate();
+
+  const { data, isLoading, refetch } = useGetQuestionsByPaperQuery(paperId, {
+    skip: !paperId,
+  });
+  const [createQuestion, { isLoading: isSaving }] = useCreateQuestionMutation();
+
+  // ✅ Cloudinary upload
+  const [uploadQuestionImage, { isLoading: isUploading }] =
+    useUploadQuestionImageMutation();
+
+  const paper = data?.paper || null;
+  const questions = Array.isArray(data?.questions) ? data.questions : [];
+  const progress = data?.progress || null;
+
+  const requiredCount = Number(
+    progress?.requiredCount || paper?.questionCount || 0
+  );
+  const answerCount = Number(
+    progress?.oneQuestionAnswersCount || paper?.oneQuestionAnswersCount || 0
+  );
+
+  const nextNumber = useMemo(() => {
+    const used = new Set(questions.map((q) => Number(q.questionNumber)));
+    for (let i = 1; i <= requiredCount; i++) if (!used.has(i)) return i;
+    return requiredCount + 1;
+  }, [questions, requiredCount]);
+
+  const isLast = nextNumber === requiredCount;
+
+  const [form, setForm] = useState({
+    question: "",
+    lessonName: "",
+    answers: [],
+    correctAnswerIndex: 0,
+    explanationVideoUrl: "",
+    explanationText: "",
+    imageUrl: "",
+  });
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      answers: Array.from(
+        { length: Math.max(answerCount, 0) },
+        (_, i) => prev.answers?.[i] || ""
+      ),
+      correctAnswerIndex: 0,
+    }));
+  }, [answerCount]);
+
+  const canSave = useMemo(() => {
+    if (!paperId) return false;
+    if (!norm(form.question)) return false;
+
+    const cleaned = (form.answers || []).map(norm).filter(Boolean);
+    if (cleaned.length !== answerCount) return false;
+
+    const idx = Number(form.correctAnswerIndex);
+    if (Number.isNaN(idx) || idx < 0 || idx >= answerCount) return false;
+
+    return true;
+  }, [paperId, form, answerCount]);
+
+  const resetForNext = () => {
+    setForm({
+      question: "",
+      lessonName: "",
+      answers: Array.from({ length: Math.max(answerCount, 0) }, () => ""),
+      correctAnswerIndex: 0,
+      explanationVideoUrl: "",
+      explanationText: "",
+      imageUrl: "",
     });
   };
 
-  const handleNext = () => {
-    if (!canSubmit) return;
+  // ✅ Cloudinary upload (NO google drive)
+  const onUploadImage = async (file) => {
+    const fd = new FormData();
+    // IMPORTANT: backend expects field name "image"
+    fd.append("image", file);
 
-    const payload = {
-      question: String(question || "").trim(),
-      answers: answers.map((a) => String(a || "").trim()),
-      correctAnswerIndexes: correctIndexes,
-      explanationVideoUrl: String(explanationVideoUrl || "").trim(),
-      writtenLogic: String(writtenLogic || "").trim(),
-    };
-
-    onNext?.(payload);
-
-    setQuestion("");
-    setAnswers(Array(answerCount).fill(""));
-    setCorrectIndexes([]);
-    setExplanationVideoUrl("");
-    setWrittenLogic("");
+    try {
+      const res = await uploadQuestionImage(fd).unwrap();
+      setForm((p) => ({ ...p, imageUrl: res?.url || "" }));
+    } catch (e) {
+      alert(e?.data?.message || "Upload failed");
+    }
   };
 
+  const onSave = async () => {
+    if (!canSave) return;
+
+    const payload = {
+      paperId,
+      questionNumber: nextNumber,
+      lessonName: norm(form.lessonName),
+      question: norm(form.question),
+      answers: (form.answers || []).map(norm),
+      correctAnswerIndex: Number(form.correctAnswerIndex),
+      explanationVideoUrl: norm(form.explanationVideoUrl),
+      explanationText: norm(form.explanationText),
+      imageUrl: norm(form.imageUrl),
+    };
+
+    try {
+      await createQuestion(payload).unwrap();
+      await refetch();
+
+      if (isLast) navigate(`/paper/${paperId}/questions/view`);
+      else resetForNext();
+    } catch (e) {
+      alert(e?.data?.message || "Failed to save question");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (!paper) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+          Paper not found
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full flex items-center justify-center px-6 sm:px-10 py-10 sm:py-14">
-      {/* ✅ wider card */}
-      <div className="w-full max-w-2xl bg-[#E6E6E6]/10 border border-gray-200 rounded-2xl shadow-sm p-8 sm:p-10 relative">
-        {/* Number Circle */}
-        <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-          <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center text-white font-extrabold border-4 border-white shadow mt-10">
-            1
+    <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold text-blue-800 mb-1">
+              Create Questions
+            </h1>
+            <div className="text-sm text-gray-700">
+              Paper: <b>{paper.paperTitle}</b>
+            </div>
+            <div className="text-sm text-gray-700">
+              Progress: <b>{progress?.currentCount || 0}</b> /{" "}
+              <b>{requiredCount}</b>
+            </div>
+            <div className="text-sm text-gray-700">
+              Answers per question: <b>{answerCount}</b>
+            </div>
           </div>
-        </div>
 
-        {/* Title */}
-        <h2 className="text-lg font-bold text-gray-900 mt-4 mb-4">Question</h2>
-
-        {/* Question input */}
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          className="w-full rounded-xl bg-gray-200 px-4 py-3 outline-none text-sm"
-          placeholder=""
-        />
-
-        {/* Answers */}
-        <div className="mt-5 space-y-4">
-          {answers.map((val, idx) => {
-            const selected = correctIndexes.includes(idx);
-
-            return (
-              <div key={idx} className="flex items-center gap-4">
-                <div className="w-24 text-sm text-gray-800">{idx + 1})answer</div>
-
-                <input
-                  value={val}
-                  onChange={(e) => {
-                    const copy = [...answers];
-                    copy[idx] = e.target.value;
-                    setAnswers(copy);
-                  }}
-                  className="flex-1 rounded-xl bg-gray-200 px-4 py-3 outline-none text-sm"
-                  placeholder=""
-                />
-
-                <button
-                  type="button"
-                  onClick={() => toggleCorrect(idx)}
-                  className="w-7 h-7 flex items-center justify-center"
-                  title="Mark correct"
-                >
-                  <span
-                    className={[
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                      selected ? "border-blue-600" : "border-gray-300",
-                    ].join(" ")}
-                  >
-                    <span
-                      className={[
-                        "w-2.5 h-2.5 rounded-full",
-                        selected ? "bg-blue-600" : "bg-transparent",
-                      ].join(" ")}
-                    />
-                  </span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Explain video url */}
-        <div className="mt-6">
-          <div className="text-xs text-gray-700 mb-2">explain video url</div>
-          <input
-            value={explanationVideoUrl}
-            onChange={(e) => setExplanationVideoUrl(e.target.value)}
-            className="w-full rounded-xl bg-gray-200 px-4 py-3 outline-none text-sm"
-            placeholder=""
-          />
-        </div>
-
-        {/* Written Logic */}
-        <div className="mt-4">
-          <div className="text-xs text-gray-700 mb-2">written Logic</div>
-          <textarea
-            value={writtenLogic}
-            onChange={(e) => setWrittenLogic(e.target.value)}
-            className="w-full rounded-xl bg-gray-200 px-4 py-3 outline-none text-sm min-h-[150px] resize-none"
-            placeholder=""
-          />
-        </div>
-
-        <div className="mt-4 text-xs text-gray-500">
-          Select <b>1 or 2</b> correct answers (max 2).
-        </div>
-
-        <div className="mt-6 flex justify-center">
           <button
-            type="button"
-            onClick={handleNext}
-            disabled={!canSubmit}
-            className={[
-              "px-6 py-2.5 rounded-full text-white text-sm font-bold",
-              canSubmit ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed",
-            ].join(" ")}
+            onClick={() => navigate(`/paper/${paperId}/questions/view`)}
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-bold hover:bg-gray-50"
           >
-            Next question
+            View All
           </button>
+        </div>
+
+        <div className="mt-5 bg-gray-50 border border-gray-200 rounded-2xl p-5">
+          <div className="text-sm font-extrabold text-gray-800">
+            Question #{nextNumber} {isLast ? "(Last)" : ""}
+          </div>
+
+          {/* Question */}
+          <div className="mt-3">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Question
+            </label>
+            <input
+              value={form.question}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, question: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            />
+          </div>
+
+          {/* Lesson name */}
+          <div className="mt-3">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Lesson Name
+            </label>
+            <input
+              value={form.lessonName}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, lessonName: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            />
+          </div>
+
+          {/* Image upload (Cloudinary) */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm font-semibold text-gray-700">
+                Question Image
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, imageUrl: "" }))}
+                className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="mt-2">
+              <Dropzone onFile={onUploadImage} />
+              {isUploading && (
+                <div className="text-xs text-gray-600 mt-1">Uploading...</div>
+              )}
+            </div>
+
+            {!!form.imageUrl && (
+              <div className="mt-3">
+                <div className="text-xs text-gray-600 mb-2">Preview</div>
+                <img
+                  src={form.imageUrl}
+                  alt="question"
+                  className="max-h-56 rounded-xl border border-gray-200"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Answers */}
+          <div className="mt-5">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Answers
+            </label>
+
+            <div className="space-y-3">
+              {Array.from({ length: answerCount }, (_, i) => {
+                const val = form.answers?.[i] || "";
+                return (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-20 text-sm text-gray-800 font-semibold">
+                      Answer {i + 1}
+                    </div>
+
+                    <input
+                      value={val}
+                      onChange={(e) => {
+                        const copy = [...(form.answers || [])];
+                        copy[i] = e.target.value;
+                        setForm((p) => ({ ...p, answers: copy }));
+                      }}
+                      className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                    />
+
+                    <label className="text-xs text-gray-700 flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="correct"
+                        checked={Number(form.correctAnswerIndex) === i}
+                        onChange={() =>
+                          setForm((p) => ({ ...p, correctAnswerIndex: i }))
+                        }
+                      />
+                      Correct
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Explanation URL */}
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Explanation Video URL
+            </label>
+            <input
+              value={form.explanationVideoUrl}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, explanationVideoUrl: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              placeholder="https://youtube.com/..."
+            />
+          </div>
+
+          {/* Explanation Notes */}
+          <div className="mt-3">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Explanation Notes / Logic
+            </label>
+            <textarea
+              rows={4}
+              value={form.explanationText}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, explanationText: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              placeholder="Write explanation logic here..."
+            />
+          </div>
+
+          <div className="mt-5 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={!canSave || isSaving}
+              className="rounded-xl bg-blue-700 px-5 py-2 text-white font-extrabold hover:bg-blue-800 transition disabled:opacity-60"
+            >
+              {isSaving ? "Saving..." : isLast ? "Submit" : "Next Question"}
+            </button>
+          </div>
+
+          {!canSave && (
+            <div className="mt-2 text-xs text-red-600">
+              Fill question + exactly {answerCount} answers + select correct answer.
+            </div>
+          )}
         </div>
       </div>
     </div>

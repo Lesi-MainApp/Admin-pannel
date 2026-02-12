@@ -18,16 +18,19 @@ import { classApi } from "./classApi";
 import lessonUiReducer from "./features/lessonSlice";
 import { lessonApi } from "./lessonApi";
 
-// ✅ NEW LIVE
 import liveUiReducer from "./features/liveSlice";
 import { liveApi } from "./liveApi";
 
 import enrollUiReducer from "./features/enrollSlice";
 import { enrollApi } from "./enrollApi";
 
-// ✅ PAPER
 import paperReducer from "./features/paperSlice";
 import { paperApi } from "./paperApi";
+
+import questionUiReducer from "./features/questionSlice";
+import { questionApi } from "./questionApi";
+
+import { uploadApi } from "./uploadApi";
 
 export const store = configureStore({
   reducer: {
@@ -39,8 +42,8 @@ export const store = configureStore({
     enrollUi: enrollUiReducer,
     liveUi: liveUiReducer,
 
-    // ✅ PAPER
     paper: paperReducer,
+    questionUi: questionUiReducer,
 
     [authApi.reducerPath]: authApi.reducer,
     [gradeSubjectApi.reducerPath]: gradeSubjectApi.reducer,
@@ -51,8 +54,9 @@ export const store = configureStore({
     [enrollApi.reducerPath]: enrollApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
 
-    // ✅ PAPER
     [paperApi.reducerPath]: paperApi.reducer,
+    [questionApi.reducerPath]: questionApi.reducer,
+    [uploadApi.reducerPath]: uploadApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -64,9 +68,9 @@ export const store = configureStore({
       lessonApi.middleware,
       enrollApi.middleware,
       liveApi.middleware,
-
-      // ✅ PAPER
-      paperApi.middleware
+      paperApi.middleware,
+      questionApi.middleware,
+      uploadApi.middleware
     ),
 });
 
