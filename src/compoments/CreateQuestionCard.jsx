@@ -362,11 +362,7 @@ export default function CreatePaperQuestionsPage() {
             </button>
           </div>
 
-          {!canSave && (
-            <div className="mt-2 text-xs text-red-600">
-              Fill question + exactly {answerCount} answers + select correct answer.
-            </div>
-          )}
+          
         </div>
       </div>
     </div>

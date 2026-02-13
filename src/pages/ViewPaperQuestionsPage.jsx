@@ -127,28 +127,7 @@ export default function ViewPaperQuestionsPage() {
   return (
     <div className="w-full min-h-screen bg-[#F7F6F6] px-3 py-8 flex justify-center">
       <div className="w-full max-w-4xl">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-extrabold text-blue-800 mb-1">
-                View Questions
-              </h1>
-              <div className="text-sm text-gray-700">
-                Paper: <b>{paper.paperTitle}</b>
-              </div>
-              <div className="text-sm text-gray-700">
-                Total: <b>{questions.length}</b>
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate(`/paper/${paperId}/questions/create`)}
-              className="rounded-xl bg-blue-700 px-4 py-2 text-white font-extrabold hover:bg-blue-800 transition"
-            >
-              Add More
-            </button>
-          </div>
-        </div>
+       
 
         <div className="mt-5 space-y-4">
           {questions.map((q) => (

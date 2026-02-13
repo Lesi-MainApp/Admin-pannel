@@ -1,3 +1,4 @@
+// src/api/questionApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
@@ -13,29 +14,29 @@ export const questionApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["QuestionsByPaper"],
+  tagTypes: ["Question", "PaperQuestions"],
   endpoints: (builder) => ({
     getQuestionsByPaper: builder.query({
       query: (paperId) => ({ url: `/paper/${paperId}`, method: "GET" }),
-      providesTags: (res, err, arg) => [{ type: "QuestionsByPaper", id: arg }],
+      providesTags: (res, err, paperId) => [
+        { type: "PaperQuestions", id: paperId },
+      ],
     }),
 
     createQuestion: builder.mutation({
       query: (payload) => ({ url: "/", method: "POST", body: payload }),
-      invalidatesTags: (res, err, arg) => [{ type: "QuestionsByPaper", id: arg.paperId }],
+      invalidatesTags: (res, err, arg) => [
+        { type: "PaperQuestions", id: arg.paperId },
+      ],
     }),
 
-    // ✅ PATCH /api/question/:questionId
     updateQuestion: builder.mutation({
       query: ({ questionId, patch }) => ({
         url: `/${questionId}`,
         method: "PATCH",
         body: patch,
       }),
-      invalidatesTags: (res, err, arg) => [
-        // refresh the paper list after editing
-        { type: "QuestionsByPaper", id: arg.paperId },
-      ],
+      invalidatesTags: (res, err, arg) => [{ type: "Question", id: arg.questionId }],
     }),
   }),
 });

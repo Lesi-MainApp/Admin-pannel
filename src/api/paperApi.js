@@ -1,3 +1,4 @@
+// src/api/paperApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
@@ -20,11 +21,15 @@ export const paperApi = createApi({
       providesTags: ["PaperFormData"],
     }),
 
+    // ✅ returns papers with progress + status (publish/complete/in_progress)
     getPapers: builder.query({
       query: () => ({ url: "/", method: "GET" }),
       providesTags: (res) =>
         res?.papers
-          ? [{ type: "Paper", id: "LIST" }, ...res.papers.map((p) => ({ type: "Paper", id: p._id }))]
+          ? [
+              { type: "Paper", id: "LIST" },
+              ...res.papers.map((p) => ({ type: "Paper", id: p._id })),
+            ]
           : [{ type: "Paper", id: "LIST" }],
     }),
 
@@ -49,6 +54,15 @@ export const paperApi = createApi({
       query: (paperId) => ({ url: `/${paperId}`, method: "DELETE" }),
       invalidatesTags: [{ type: "Paper", id: "LIST" }],
     }),
+
+    // ✅ publish only complete papers
+    publishPaper: builder.mutation({
+      query: (paperId) => ({ url: `/${paperId}/publish`, method: "POST" }),
+      invalidatesTags: (res, err, paperId) => [
+        { type: "Paper", id: paperId },
+        { type: "Paper", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -58,4 +72,5 @@ export const {
   useCreatePaperMutation,
   useUpdatePaperMutation,
   useDeletePaperMutation,
+  usePublishPaperMutation,
 } = paperApi;
