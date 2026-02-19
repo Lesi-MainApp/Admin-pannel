@@ -1,4 +1,3 @@
-// src/api/paperApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
@@ -21,7 +20,6 @@ export const paperApi = createApi({
       providesTags: ["PaperFormData"],
     }),
 
-    // ✅ returns papers with progress + status (publish/complete/in_progress)
     getPapers: builder.query({
       query: () => ({ url: "/", method: "GET" }),
       providesTags: (res) =>
@@ -55,7 +53,6 @@ export const paperApi = createApi({
       invalidatesTags: [{ type: "Paper", id: "LIST" }],
     }),
 
-    // ✅ publish only complete papers
     publishPaper: builder.mutation({
       query: (paperId) => ({ url: `/${paperId}/publish`, method: "POST" }),
       invalidatesTags: (res, err, paperId) => [

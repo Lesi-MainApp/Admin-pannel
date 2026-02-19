@@ -1,4 +1,3 @@
-// frontend/src/features/questionSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {

@@ -53,7 +53,6 @@ export default function CreatePaperQuestionsPage() {
   });
   const [createQuestion, { isLoading: isSaving }] = useCreateQuestionMutation();
 
-  // ✅ Cloudinary upload
   const [uploadQuestionImage, { isLoading: isUploading }] =
     useUploadQuestionImageMutation();
 
@@ -64,8 +63,10 @@ export default function CreatePaperQuestionsPage() {
   const requiredCount = Number(
     progress?.requiredCount || paper?.questionCount || 0
   );
-  const answerCount = Number(
-    progress?.oneQuestionAnswersCount || paper?.oneQuestionAnswersCount || 0
+
+  // ✅ UI default (paper setting), but allow change per question
+  const defaultAnswerCount = Number(
+    progress?.oneQuestionAnswersCount || paper?.oneQuestionAnswersCount || 4
   );
 
   const nextNumber = useMemo(() => {
@@ -80,52 +81,102 @@ export default function CreatePaperQuestionsPage() {
     question: "",
     lessonName: "",
     answers: [],
-    correctAnswerIndex: 0,
+    correctAnswerIndexes: [], // ✅ multi correct
     explanationVideoUrl: "",
     explanationText: "",
     imageUrl: "",
   });
 
+  // init answers length
   useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      answers: Array.from(
-        { length: Math.max(answerCount, 0) },
+    setForm((prev) => {
+      const nextAnswers = Array.from(
+        { length: Math.max(defaultAnswerCount, 1) },
         (_, i) => prev.answers?.[i] || ""
-      ),
-      correctAnswerIndex: 0,
-    }));
-  }, [answerCount]);
+      );
+      return {
+        ...prev,
+        answers: nextAnswers,
+        correctAnswerIndexes: prev.correctAnswerIndexes || [],
+      };
+    });
+  }, [defaultAnswerCount]);
+
+  const toggleCorrect = (i) => {
+    setForm((p) => {
+      const set = new Set((p.correctAnswerIndexes || []).map(Number));
+      if (set.has(i)) set.delete(i);
+      else set.add(i);
+      return { ...p, correctAnswerIndexes: Array.from(set).sort((a, b) => a - b) };
+    });
+  };
+
+  const addAnswer = () => {
+    setForm((p) => {
+      const cur = Array.isArray(p.answers) ? p.answers : [];
+      if (cur.length >= 6) return p;
+      return { ...p, answers: [...cur, ""] };
+    });
+  };
+
+  const removeAnswer = (indexToRemove) => {
+    setForm((p) => {
+      const cur = Array.isArray(p.answers) ? p.answers : [];
+      if (cur.length <= 1) return p;
+
+      const nextAnswers = cur.filter((_, i) => i !== indexToRemove);
+
+      // fix correct indexes after removal
+      const nextCorrect = (p.correctAnswerIndexes || [])
+        .map(Number)
+        .filter((x) => Number.isFinite(x))
+        .map((x) => {
+          if (x === indexToRemove) return null;
+          if (x > indexToRemove) return x - 1;
+          return x;
+        })
+        .filter((x) => x !== null)
+        .filter((x) => x >= 0 && x < nextAnswers.length);
+
+      return {
+        ...p,
+        answers: nextAnswers,
+        correctAnswerIndexes: [...new Set(nextCorrect)].sort((a, b) => a - b),
+      };
+    });
+  };
 
   const canSave = useMemo(() => {
     if (!paperId) return false;
     if (!norm(form.question)) return false;
 
     const cleaned = (form.answers || []).map(norm).filter(Boolean);
-    if (cleaned.length !== answerCount) return false;
+    if (cleaned.length < 1 || cleaned.length > 6) return false;
 
-    const idx = Number(form.correctAnswerIndex);
-    if (Number.isNaN(idx) || idx < 0 || idx >= answerCount) return false;
+    const idxs = (form.correctAnswerIndexes || [])
+      .map(Number)
+      .filter((x) => Number.isFinite(x))
+      .filter((x) => x >= 0 && x < cleaned.length);
+
+    if (idxs.length < 1) return false;
 
     return true;
-  }, [paperId, form, answerCount]);
+  }, [paperId, form]);
 
   const resetForNext = () => {
     setForm({
       question: "",
       lessonName: "",
-      answers: Array.from({ length: Math.max(answerCount, 0) }, () => ""),
-      correctAnswerIndex: 0,
+      answers: Array.from({ length: Math.max(defaultAnswerCount, 1) }, () => ""),
+      correctAnswerIndexes: [],
       explanationVideoUrl: "",
       explanationText: "",
       imageUrl: "",
     });
   };
 
-  // ✅ Cloudinary upload (NO google drive)
   const onUploadImage = async (file) => {
     const fd = new FormData();
-    // IMPORTANT: backend expects field name "image"
     fd.append("image", file);
 
     try {
@@ -139,13 +190,23 @@ export default function CreatePaperQuestionsPage() {
   const onSave = async () => {
     if (!canSave) return;
 
+    const cleanedAnswers = (form.answers || []).map(norm).filter(Boolean);
+
+    const idxs = (form.correctAnswerIndexes || [])
+      .map(Number)
+      .filter((x) => Number.isFinite(x))
+      .filter((x) => x >= 0 && x < cleanedAnswers.length);
+
     const payload = {
       paperId,
       questionNumber: nextNumber,
       lessonName: norm(form.lessonName),
       question: norm(form.question),
-      answers: (form.answers || []).map(norm),
-      correctAnswerIndex: Number(form.correctAnswerIndex),
+      answers: cleanedAnswers,
+
+      // ✅ send multi correct
+      correctAnswerIndexes: [...new Set(idxs)].sort((a, b) => a - b),
+
       explanationVideoUrl: norm(form.explanationVideoUrl),
       explanationText: norm(form.explanationText),
       imageUrl: norm(form.imageUrl),
@@ -182,6 +243,8 @@ export default function CreatePaperQuestionsPage() {
     );
   }
 
+  const answerCount = (form.answers || []).length;
+
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
       <div className="w-full max-w-3xl bg-white rounded-2xl shadow-md border border-gray-200 p-6">
@@ -194,11 +257,13 @@ export default function CreatePaperQuestionsPage() {
               Paper: <b>{paper.paperTitle}</b>
             </div>
             <div className="text-sm text-gray-700">
-              Progress: <b>{progress?.currentCount || 0}</b> /{" "}
-              <b>{requiredCount}</b>
+              Progress: <b>{progress?.currentCount || 0}</b> / <b>{requiredCount}</b>
             </div>
             <div className="text-sm text-gray-700">
-              Answers per question: <b>{answerCount}</b>
+              Answers (this question): <b>{answerCount}</b> (min 1, max 6)
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              ✅ Correct answers can be 1 or more (multiple)
             </div>
           </div>
 
@@ -243,7 +308,7 @@ export default function CreatePaperQuestionsPage() {
             />
           </div>
 
-          {/* Image upload (Cloudinary) */}
+          {/* Image upload */}
           <div className="mt-4">
             <div className="flex items-center justify-between gap-3">
               <label className="block text-sm font-semibold text-gray-700">
@@ -280,13 +345,29 @@ export default function CreatePaperQuestionsPage() {
 
           {/* Answers */}
           <div className="mt-5">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Answers
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm font-semibold text-gray-700">
+                Answers (multi correct supported)
+              </label>
 
-            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={addAnswer}
+                  disabled={answerCount >= 6}
+                  className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100 disabled:opacity-60"
+                >
+                  + Add Answer
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 mt-3">
               {Array.from({ length: answerCount }, (_, i) => {
                 const val = form.answers?.[i] || "";
+                const checked =
+                  (form.correctAnswerIndexes || []).map(Number).includes(i);
+
                 return (
                   <div key={i} className="flex items-center gap-3">
                     <div className="w-20 text-sm text-gray-800 font-semibold">
@@ -305,18 +386,28 @@ export default function CreatePaperQuestionsPage() {
 
                     <label className="text-xs text-gray-700 flex items-center gap-2">
                       <input
-                        type="radio"
-                        name="correct"
-                        checked={Number(form.correctAnswerIndex) === i}
-                        onChange={() =>
-                          setForm((p) => ({ ...p, correctAnswerIndex: i }))
-                        }
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCorrect(i)}
                       />
                       Correct
                     </label>
+
+                    <button
+                      type="button"
+                      onClick={() => removeAnswer(i)}
+                      disabled={answerCount <= 1}
+                      className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100 disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
                   </div>
                 );
               })}
+            </div>
+
+            <div className="text-xs text-gray-500 mt-2">
+              ✅ Select 1 or more correct answers.
             </div>
           </div>
 
@@ -361,8 +452,6 @@ export default function CreatePaperQuestionsPage() {
               {isSaving ? "Saving..." : isLast ? "Submit" : "Next Question"}
             </button>
           </div>
-
-          
         </div>
       </div>
     </div>

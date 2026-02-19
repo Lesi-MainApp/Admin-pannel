@@ -1,4 +1,3 @@
-// src/api/questionApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
@@ -14,20 +13,22 @@ export const questionApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Question", "PaperQuestions"],
+  tagTypes: ["Question"],
   endpoints: (builder) => ({
     getQuestionsByPaper: builder.query({
       query: (paperId) => ({ url: `/paper/${paperId}`, method: "GET" }),
-      providesTags: (res, err, paperId) => [
-        { type: "PaperQuestions", id: paperId },
-      ],
+      providesTags: (res) =>
+        res?.questions
+          ? [
+              { type: "Question", id: "LIST" },
+              ...res.questions.map((q) => ({ type: "Question", id: q._id })),
+            ]
+          : [{ type: "Question", id: "LIST" }],
     }),
 
     createQuestion: builder.mutation({
-      query: (payload) => ({ url: "/", method: "POST", body: payload }),
-      invalidatesTags: (res, err, arg) => [
-        { type: "PaperQuestions", id: arg.paperId },
-      ],
+      query: (payload) => ({ url: `/`, method: "POST", body: payload }),
+      invalidatesTags: [{ type: "Question", id: "LIST" }],
     }),
 
     updateQuestion: builder.mutation({
@@ -36,7 +37,10 @@ export const questionApi = createApi({
         method: "PATCH",
         body: patch,
       }),
-      invalidatesTags: (res, err, arg) => [{ type: "Question", id: arg.questionId }],
+      invalidatesTags: (res, err, arg) => [
+        { type: "Question", id: arg.questionId },
+        { type: "Question", id: "LIST" },
+      ],
     }),
   }),
 });

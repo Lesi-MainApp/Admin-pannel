@@ -1,12 +1,25 @@
-// src/pages/QuestionPage.jsx
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useGetPapersQuery,
-  usePublishPaperMutation,
-} from "../api/paperApi";
+import { useGetPapersQuery, usePublishPaperMutation } from "../api/paperApi";
 
 const fmt = (v) => String(v ?? "").trim();
+
+const fmtMoney = (n) => {
+  const v = Number(n || 0);
+  return `Rs. ${v.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const payLabel = (payment, amount) => {
+  const p = String(payment || "").toLowerCase();
+  if (p === "paid") return `PAID (${fmtMoney(amount)})`;
+  return "FREE";
+};
+
+const payBadgeClass = (payment) => {
+  const p = String(payment || "").toLowerCase();
+  if (p === "paid") return "bg-purple-100 text-purple-800 border-purple-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+};
 
 const badgeClass = (status) => {
   if (status === "publish") return "bg-green-100 text-green-800 border-green-200";
@@ -27,7 +40,6 @@ export default function QuestionPage() {
 
   const papers = useMemo(() => {
     const list = Array.isArray(data?.papers) ? data.papers : [];
-    // newest first (backend already sorts, but keep safe)
     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [data]);
 
@@ -68,7 +80,6 @@ export default function QuestionPage() {
               {isFetching ? <span className="ml-2 text-xs text-gray-500">Refreshing...</span> : null}
             </div>
           </div>
-
         </div>
 
         <div className="mt-5 overflow-x-auto">
@@ -101,11 +112,23 @@ export default function QuestionPage() {
                 const currentCount = Number(p?.progress?.currentCount || 0);
                 const requiredCount = Number(p?.progress?.requiredCount || questionCount || 0);
 
-                const status = fmt(p?.status) || "in_progress"; // backend returns status: publish | complete | in_progress
+                const status = fmt(p?.status) || "in_progress";
 
                 return (
                   <tr key={paperId} className="text-gray-800">
-                    <td className="py-3 px-3 border-b font-semibold">{name}</td>
+                    <td className="py-3 px-3 border-b">
+                      <div className="font-semibold">{name}</div>
+                      <div className="mt-1">
+                        <span
+                          className={[
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold",
+                            payBadgeClass(p?.payment),
+                          ].join(" ")}
+                        >
+                          {payLabel(p?.payment, p?.amount)}
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-3 px-3 border-b">{grade}</td>
                     <td className="py-3 px-3 border-b">{subjectStream}</td>
                     <td className="py-3 px-3 border-b">{time ? `${time} min` : "-"}</td>
@@ -140,7 +163,6 @@ export default function QuestionPage() {
                           Edit Paper
                         </button>
 
-                        {/* ✅ Edit Questions allowed for incomplete + complete (NOT published) */}
                         {status !== "publish" && (
                           <button
                             onClick={() => onEditQuestions(paperId)}
@@ -150,7 +172,6 @@ export default function QuestionPage() {
                           </button>
                         )}
 
-                        {/* ✅ Publish button only for complete papers */}
                         {status === "complete" && (
                           <button
                             disabled={isPublishing}

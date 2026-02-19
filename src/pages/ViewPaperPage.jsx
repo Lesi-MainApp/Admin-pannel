@@ -12,6 +12,23 @@ const fmtDate = (d) => {
   return x.toLocaleString();
 };
 
+const fmtMoney = (n) => {
+  const v = Number(n || 0);
+  return `Rs. ${v.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const payLabel = (payment, amount) => {
+  const p = String(payment || "").toLowerCase();
+  if (p === "paid") return `PAID (${fmtMoney(amount)})`;
+  return "FREE";
+};
+
+const payBadgeClass = (payment) => {
+  const p = String(payment || "").toLowerCase();
+  if (p === "paid") return "bg-purple-100 text-purple-800 border-purple-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+};
+
 const Modal = ({ open, title, children, onClose }) => {
   if (!open) return null;
   return (
@@ -55,6 +72,8 @@ const ViewPaperPage = () => {
         questionCount: p.questionCount ?? "-",
         createdBy: p.createdPersonName || "-",
         createdAt: fmtDate(p.createdAt),
+        payment: p.payment,
+        amount: p.amount,
       };
     });
   }, [papers]);
@@ -97,10 +116,10 @@ const ViewPaperPage = () => {
       paperTitle: paper.paperTitle || "",
       timeMinutes: paper.timeMinutes ?? "",
       questionCount: paper.questionCount ?? "",
-      oneQuestionAnswersCount: paper.oneQuestionAnswersCount ?? 5,
+      oneQuestionAnswersCount: paper.oneQuestionAnswersCount ?? 4,
       createdPersonName: paper.createdPersonName || "",
       payment: paper.payment || "free",
-      amount: paper.payment === "paid" ? String(paper.amount ?? "") : "",
+      amount: String((paper.payment === "paid" ? paper.amount : "") ?? ""),
       attempts: paper.attempts ?? 1,
       isActive: paper.isActive !== false,
     });
@@ -120,13 +139,15 @@ const ViewPaperPage = () => {
     const qc = Number(form.questionCount);
     if (!qc || qc < 1 || qc > 50) e.questionCount = "Question Count must be 1..50";
 
+    // ✅ FIX: backend supports 1..6 (not 2..10)
     const oq = Number(form.oneQuestionAnswersCount);
-    if (!oq || oq < 2 || oq > 10) e.oneQuestionAnswersCount = "Answers per question must be 2..10";
+    if (!oq || oq < 1 || oq > 6) e.oneQuestionAnswersCount = "Answers per question must be 1..6";
 
     if (!String(form.createdPersonName || "").trim()) e.createdPersonName = "Created Person Name is required";
 
     if (!paymentTypes.includes(String(form.payment))) e.payment = "Invalid payment";
 
+    // ✅ amount required if paid
     if (String(form.payment) === "paid") {
       const a = Number(form.amount);
       if (!a || a <= 0) e.amount = "Amount must be > 0 for paid papers";
@@ -184,12 +205,10 @@ const ViewPaperPage = () => {
   return (
     <div className="w-full flex justify-center">
       <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
-        {/* TITLE */}
         <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
           Paper Details
         </h1>
 
-        {/* TABLE */}
         <div className="mt-6 w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <table className="w-full table-fixed">
             <thead>
@@ -223,7 +242,22 @@ const ViewPaperPage = () => {
                 rows.map((p, idx) => (
                   <tr key={p._id} className="border-t text-sm">
                     <td className="p-3 truncate">{String(idx + 1)}</td>
-                    <td className="p-3 font-semibold truncate">{p.name}</td>
+
+                    {/* ✅ Paper name + FREE/PAID badge (no layout change) */}
+                    <td className="p-3 truncate">
+                      <div className="font-semibold truncate">{p.name}</div>
+                      <div className="mt-1">
+                        <span
+                          className={[
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold",
+                            payBadgeClass(p.payment),
+                          ].join(" ")}
+                        >
+                          {payLabel(p.payment, p.amount)}
+                        </span>
+                      </div>
+                    </td>
+
                     <td className="p-3 truncate">{p.grade}</td>
                     <td className="p-3 truncate">{p.subject}</td>
                     <td className="p-3 truncate">{p.time}</td>
@@ -316,10 +350,11 @@ const ViewPaperPage = () => {
                 <span className="text-right">{selected.oneQuestionAnswersCount}</span>
               </div>
 
+              {/* ✅ Payment label */}
               <div className="flex justify-between">
                 <span className="font-bold">Payment:</span>
                 <span className="text-right">
-                  {selected.payment} {selected.payment === "paid" ? `(Rs. ${selected.amount})` : ""}
+                  {payLabel(selected.payment, selected.amount)}
                 </span>
               </div>
 
@@ -440,8 +475,8 @@ const ViewPaperPage = () => {
                 </label>
                 <input
                   type="number"
-                  min={2}
-                  max={10}
+                  min={1}
+                  max={6}
                   value={form.oneQuestionAnswersCount}
                   onChange={(e) => setField("oneQuestionAnswersCount", e.target.value)}
                   className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400"
@@ -524,7 +559,6 @@ const ViewPaperPage = () => {
                 {errors.attempts && <p className="text-xs text-red-600 mt-1">{errors.attempts}</p>}
               </div>
 
-              {/* SUBMIT */}
               <div className="pt-2">
                 <button
                   type="submit"
