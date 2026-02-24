@@ -32,6 +32,10 @@ import { questionApi } from "./questionApi";
 
 import { uploadApi } from "./uploadApi";
 
+// ✅ STUDENT (from src/api)
+import studentReducer from "../api/features/studentSlice";
+import { studentApi } from "../api/studentApi";
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -45,6 +49,9 @@ export const store = configureStore({
     paper: paperReducer,
     questionUi: questionUiReducer,
 
+    // ✅ student filter state
+    student: studentReducer,
+
     [authApi.reducerPath]: authApi.reducer,
     [gradeSubjectApi.reducerPath]: gradeSubjectApi.reducer,
     [teacherApi.reducerPath]: teacherApi.reducer,
@@ -57,6 +64,9 @@ export const store = configureStore({
     [paperApi.reducerPath]: paperApi.reducer,
     [questionApi.reducerPath]: questionApi.reducer,
     [uploadApi.reducerPath]: uploadApi.reducer,
+
+    // ✅ student api
+    [studentApi.reducerPath]: studentApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -70,7 +80,10 @@ export const store = configureStore({
       liveApi.middleware,
       paperApi.middleware,
       questionApi.middleware,
-      uploadApi.middleware
+      uploadApi.middleware,
+
+      // ✅ student middleware
+      studentApi.middleware
     ),
 });
 
