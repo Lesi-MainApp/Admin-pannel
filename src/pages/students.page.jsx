@@ -1,5 +1,7 @@
+// src/pages/Students.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   useGetStudentOptionsQuery,
   useGetStudentsQuery,
@@ -18,20 +20,27 @@ const levelsToGrades = {
 
 const Modal = ({ open, title, onClose, children, footer }) => {
   if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-3">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b flex items-center justify-between">
-          <h3 className="text-lg font-extrabold text-gray-800">{title}</h3>
+      <div className="w-full max-w-2xl overflow-hidden border border-gray-200 bg-white shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-[#F8FAFC] px-5 py-4">
+          <h3 className="text-base font-semibold text-gray-800">{title}</h3>
           <button
             onClick={onClose}
-            className="rounded-lg px-3 py-1 bg-gray-100 hover:bg-gray-200 font-bold"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            ✕
+            Close
           </button>
         </div>
+
         <div className="p-5">{children}</div>
-        {footer ? <div className="px-5 py-4 border-t bg-gray-50">{footer}</div> : null}
+
+        {footer ? (
+          <div className="border-t border-gray-200 bg-[#F8FAFC] px-5 py-4">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -39,23 +48,23 @@ const Modal = ({ open, title, onClose, children, footer }) => {
 
 const Input = ({ label, value, onChange, placeholder = "" }) => (
   <div className="w-full">
-    <label className="text-xs font-semibold text-gray-600">{label}</label>
+    <label className="text-xs font-medium text-gray-600">{label}</label>
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+      className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
     />
   </div>
 );
 
 const Select = ({ label, value, onChange, options, placeholder = "Select" }) => (
   <div className="w-full">
-    <label className="text-xs font-semibold text-gray-600">{label}</label>
+    <label className="text-xs font-medium text-gray-600">{label}</label>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+      className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
     >
       <option value="">{placeholder}</option>
       {options.map((op) => (
@@ -68,16 +77,24 @@ const Select = ({ label, value, onChange, options, placeholder = "Select" }) => 
 );
 
 const Th = ({ children, className = "" }) => (
-  <th className={`p-2 text-left text-[12px] font-bold text-gray-800 ${className}`}>{children}</th>
+  <th
+    className={`border-b border-r border-gray-200 bg-[#F8FAFC] px-4 py-3 text-left text-[13px] font-medium text-gray-600 ${className}`}
+  >
+    {children}
+  </th>
 );
+
 const Td = ({ children, className = "" }) => (
-  <td className={`p-2 align-top text-[12px] text-gray-700 ${className}`}>{children}</td>
+  <td
+    className={`border-b border-r border-gray-200 px-4 py-4 align-top text-sm text-gray-700 ${className}`}
+  >
+    {children}
+  </td>
 );
 
 const StudentsPage = () => {
   const dispatch = useDispatch();
-
-  // ✅ MUST match store key: student
+  const navigate = useNavigate();
   const filters = useSelector((s) => s.student.filters);
 
   const { data: optData } = useGetStudentOptionsQuery();
@@ -87,10 +104,9 @@ const StudentsPage = () => {
 
   const gradeOptions = useMemo(() => {
     const lv = String(filters.level || "").trim();
-    return lv ? (levelsToGrades[lv] || []) : [];
+    return lv ? levelsToGrades[lv] || [] : [];
   }, [filters.level]);
 
-  // ✅ Auto-load ALL (filters default is empty => backend returns all)
   const { data, isLoading, isFetching, error } = useGetStudentsQuery(filters);
   const rows = data?.rows || [];
   const total = data?.total || 0;
@@ -150,7 +166,9 @@ const StudentsPage = () => {
       town: row?.town || "",
       address: row?.address || "",
       selectedLevel: row?.selectedLevel || "",
-      selectedGradeNumber: row?.selectedGradeNumber ? String(row.selectedGradeNumber) : "",
+      selectedGradeNumber: row?.selectedGradeNumber
+        ? String(row.selectedGradeNumber)
+        : "",
       className: row?.className || "",
     });
     setEditOpen(true);
@@ -170,8 +188,10 @@ const StudentsPage = () => {
     const active = isActive !== false;
     return (
       <span
-        className={`inline-flex px-2 py-1 rounded-full text-[11px] font-bold ${
-          active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+        className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+          active
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
         }`}
       >
         {active ? "Active" : "Inactive"}
@@ -190,7 +210,9 @@ const StudentsPage = () => {
       town: editForm.town,
       address: editForm.address,
       selectedLevel: editForm.selectedLevel || null,
-      selectedGradeNumber: editForm.selectedGradeNumber ? Number(editForm.selectedGradeNumber) : null,
+      selectedGradeNumber: editForm.selectedGradeNumber
+        ? Number(editForm.selectedGradeNumber)
+        : null,
     };
 
     await updateStudent({ id: selected._id, body }).unwrap();
@@ -219,7 +241,7 @@ const StudentsPage = () => {
   };
 
   const page = Number(filters.page || 1);
-  const limit = Number(filters.limit || 20);
+  const limit = 20;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const goPage = (p) => {
@@ -228,25 +250,52 @@ const StudentsPage = () => {
   };
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
-          Students
-        </h1>
+    <div className="flex w-full justify-center">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Student Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Search, review, edit, and manage student records.
+            </p>
+          </div>
 
-        {/* FILTER */}
+          <button
+            type="button"
+            onClick={() => navigate("/home")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
+            title="Home"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+          </button>
+        </div>
+
         <form
           onSubmit={onSearch}
-          className="mt-5 bg-white rounded-2xl shadow-sm border border-gray-200 p-4"
+          className="mt-5 border border-gray-200 bg-white p-4 sm:p-5"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Select
               label="Status"
               value={filters.status}
               onChange={(v) => dispatch(setStudentFilters({ status: v }))}
               options={[
                 { value: "active", label: "Active" },
-                { value: "inactive", label: "Non Active" },
+                { value: "inactive", label: "Inactive" },
               ]}
               placeholder="Select"
             />
@@ -267,10 +316,13 @@ const StudentsPage = () => {
             />
 
             <Select
-              label="LEVEL"
+              label="Level"
               value={filters.level}
               onChange={(v) => dispatch(setStudentFilters({ level: v, grade: "" }))}
-              options={levelOptions.map((x) => ({ value: x, label: x.toUpperCase() }))}
+              options={levelOptions.map((x) => ({
+                value: x,
+                label: x.toUpperCase(),
+              }))}
               placeholder="Select"
             />
 
@@ -283,10 +335,13 @@ const StudentsPage = () => {
             />
 
             <Select
-              label="ClassName"
+              label="Class Name"
               value={filters.classId}
               onChange={(v) => dispatch(setStudentFilters({ classId: v }))}
-              options={classes.map((c) => ({ value: c.id, label: c.className }))}
+              options={classes.map((c) => ({
+                value: c.id,
+                label: c.className,
+              }))}
               placeholder="Select"
             />
 
@@ -294,16 +349,20 @@ const StudentsPage = () => {
               label="Completed Paper Count"
               value={filters.completedCount}
               onChange={(v) =>
-                dispatch(setStudentFilters({ completedCount: v.replace(/[^\d]/g, "") }))
+                dispatch(
+                  setStudentFilters({
+                    completedCount: v.replace(/[^\d]/g, ""),
+                  })
+                )
               }
-              placeholder="number"
+              placeholder="Number"
             />
           </div>
 
-          <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="submit"
-              className="rounded-xl bg-blue-700 px-4 py-2 text-white font-extrabold hover:bg-blue-800 transition"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               Search
             </button>
@@ -311,7 +370,7 @@ const StudentsPage = () => {
             <button
               type="button"
               onClick={onReset}
-              className="rounded-xl bg-gray-200 px-4 py-2 text-gray-800 font-extrabold hover:bg-red-300 transition"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
               Reset
             </button>
@@ -319,113 +378,372 @@ const StudentsPage = () => {
 
           <div className="mt-3 text-xs text-gray-500">
             {isLoading || isFetching ? "Loading..." : `Total: ${total}`}
-            {error ? <span className="text-red-600 font-bold"> | Failed to load</span> : null}
+            {error ? (
+              <span className="font-medium text-red-600"> | Failed to load</span>
+            ) : null}
           </div>
         </form>
 
-        {/* TABLE */}
-        <div className="mt-4 w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full table-fixed">
-            <thead>
-              <tr className="bg-gray-100">
-                <Th className="w-[11%]">Student Name</Th>
-                <Th className="w-[12%]">Email</Th>
-                <Th className="w-[8%]">District</Th>
-                <Th className="w-[8%]">Town</Th>
-                <Th className="w-[12%]">Address</Th>
-                <Th className="w-[7%]">Level</Th>
-                <Th className="w-[6%]">Grade</Th>
-                <Th className="w-[10%]">ClassName</Th>
-                <Th className="w-[10%]">Complete Papers</Th>
-                <Th className="w-[7%]">Status</Th>
-                <Th className="w-[9%] text-center">Operation</Th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.length === 0 ? (
+        <div className="mt-5 overflow-hidden border border-gray-200 bg-white">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[1500px] table-fixed border-separate border-spacing-0">
+              <thead>
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={11}>
-                    No students found
-                  </td>
+                  <Th className="w-[11%]">Student Name</Th>
+                  <Th className="w-[12%]">Email</Th>
+                  <Th className="w-[8%]">District</Th>
+                  <Th className="w-[8%]">Town</Th>
+                  <Th className="w-[12%]">Address</Th>
+                  <Th className="w-[7%]">Level</Th>
+                  <Th className="w-[6%]">Grade</Th>
+                  <Th className="w-[10%]">Class Name</Th>
+                  <Th className="w-[10%]">Complete Papers</Th>
+                  <Th className="w-[7%]">Status</Th>
+                  <Th className="w-[9%] border-r-0 text-center">Operation</Th>
                 </tr>
-              ) : (
-                rows.map((s) => (
-                  <tr key={s._id} className="border-t">
-                    <Td className="truncate font-semibold">{s.name}</Td>
-                    <Td className="truncate">{s.email}</Td>
-                    <Td className="truncate">{s.district || "-"}</Td>
-                    <Td className="truncate">{s.town || "-"}</Td>
-                    <Td className="truncate">{s.address || "-"}</Td>
-                    <Td className="truncate">{s.selectedLevel || "-"}</Td>
-                    <Td className="truncate">
-                      {s.selectedGradeNumber ? String(s.selectedGradeNumber) : "-"}
-                    </Td>
-                    <Td className="truncate">{s.className || "-"}</Td>
-                    <Td className="truncate">{String(s.completedPapersCount ?? 0)}</Td>
-                    <Td>{statusBadge(s.isActive)}</Td>
+              </thead>
 
-                    <Td className="text-center">
-                      <div className="flex justify-center gap-1 flex-wrap">
-                        <button
-                          onClick={() => openView(s)}
-                          className="rounded-lg bg-blue-600 px-2 py-1 text-white text-[11px] font-bold hover:bg-blue-700"
-                        >
-                          View
-                        </button>
-
-                        <button
-                          onClick={() => openEdit(s)}
-                          className="rounded-lg bg-yellow-500 px-2 py-1 text-white text-[11px] font-bold hover:bg-yellow-600"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => openBanConfirm(s)}
-                          className="rounded-lg bg-purple-600 px-2 py-1 text-white text-[11px] font-bold hover:bg-purple-700"
-                        >
-                          {s.isActive === false ? "Unban" : "Ban"}
-                        </button>
-
-                        <button
-                          onClick={() => openDeleteConfirm1(s)}
-                          className="rounded-lg bg-red-600 px-2 py-1 text-white text-[11px] font-bold hover:bg-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </Td>
+              <tbody className="bg-white">
+                {rows.length === 0 ? (
+                  <tr>
+                    <td className="px-6 py-10 text-center text-gray-500" colSpan={11}>
+                      No students found
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  rows.map((s) => (
+                    <tr key={s._id} className="hover:bg-gray-50/70">
+                      <Td className="truncate font-medium text-gray-800">
+                        {s.name}
+                      </Td>
+                      <Td className="truncate">{s.email}</Td>
+                      <Td className="truncate">{s.district || "-"}</Td>
+                      <Td className="truncate">{s.town || "-"}</Td>
+                      <Td className="truncate">{s.address || "-"}</Td>
+                      <Td className="truncate">{s.selectedLevel || "-"}</Td>
+                      <Td className="truncate">
+                        {s.selectedGradeNumber ? String(s.selectedGradeNumber) : "-"}
+                      </Td>
+                      <Td className="truncate">{s.className || "-"}</Td>
+                      <Td className="truncate">
+                        {String(s.completedPapersCount ?? 0)}
+                      </Td>
+                      <Td>{statusBadge(s.isActive)}</Td>
 
-          <div className="p-3 flex items-center justify-between border-t bg-gray-50">
-            <div className="text-xs text-gray-600 font-bold">
-              Page {page} / {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => goPage(1)} className="px-3 py-1 rounded-lg bg-white border font-bold text-xs hover:bg-gray-100">
+                      <Td className="border-r-0 text-center">
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <button
+                            onClick={() => openView(s)}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-blue-700"
+                          >
+                            View
+                          </button>
+
+                          <button
+                            onClick={() => openEdit(s)}
+                            className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-amber-600"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => openBanConfirm(s)}
+                            className="rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-purple-700"
+                          >
+                            {s.isActive === false ? "Unban" : "Ban"}
+                          </button>
+
+                          <button
+                            onClick={() => openDeleteConfirm1(s)}
+                            className="rounded-lg bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-red-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Page {page} of {totalPages}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => goPage(1)}
+                className="inline-flex h-8 items-center justify-center rounded border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
                 First
               </button>
-              <button onClick={() => goPage(page - 1)} className="px-3 py-1 rounded-lg bg-white border font-bold text-xs hover:bg-gray-100">
+
+              <button
+                onClick={() => goPage(page - 1)}
+                className="inline-flex h-8 items-center justify-center rounded border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
                 Prev
               </button>
-              <button onClick={() => goPage(page + 1)} className="px-3 py-1 rounded-lg bg-white border font-bold text-xs hover:bg-gray-100">
+
+              <button
+                onClick={() => goPage(page + 1)}
+                className="inline-flex h-8 items-center justify-center rounded border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
                 Next
               </button>
-              <button onClick={() => goPage(totalPages)} className="px-3 py-1 rounded-lg bg-white border font-bold text-xs hover:bg-gray-100">
+
+              <button
+                onClick={() => goPage(totalPages)}
+                className="inline-flex h-8 items-center justify-center rounded border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
                 Last
               </button>
             </div>
           </div>
         </div>
 
-        {/* MODALS (same as your current code) */}
-        {/* ✅ Keep all modal code exactly as you pasted (View/Edit/Ban/Delete1/Delete2) */}
-        {/* If you want I can paste them again, but they are already correct in your file */}
+        <Modal
+          open={viewOpen}
+          title="Student Details"
+          onClose={() => setViewOpen(false)}
+          footer={
+            <div className="flex justify-end">
+              <button
+                onClick={() => setViewOpen(false)}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
+          }
+        >
+          {!selected ? (
+            <div className="text-sm text-gray-500">No data</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-xs font-medium text-gray-500">Name</div>
+                <div className="mt-1 text-sm text-gray-800">{selected.name || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Email</div>
+                <div className="mt-1 text-sm text-gray-800">{selected.email || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Phone</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.phonenumber || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">District</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.district || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Town</div>
+                <div className="mt-1 text-sm text-gray-800">{selected.town || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Address</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.address || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Level</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.selectedLevel || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Grade</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.selectedGradeNumber || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Class Name</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.className || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Completed Papers</div>
+                <div className="mt-1 text-sm text-gray-800">
+                  {selected.completedPapersCount ?? 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Status</div>
+                <div className="mt-1">{statusBadge(selected.isActive)}</div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        <Modal
+          open={editOpen}
+          title="Edit Student"
+          onClose={() => setEditOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditOpen(false)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={updating}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                {updating ? "Saving..." : "Save"}
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Name"
+              value={editForm.name}
+              onChange={(v) => setEditForm((p) => ({ ...p, name: v }))}
+            />
+            <Input
+              label="Email"
+              value={editForm.email}
+              onChange={(v) => setEditForm((p) => ({ ...p, email: v }))}
+            />
+            <Input
+              label="Phone Number"
+              value={editForm.phonenumber}
+              onChange={(v) => setEditForm((p) => ({ ...p, phonenumber: v }))}
+            />
+            <Input
+              label="District"
+              value={editForm.district}
+              onChange={(v) => setEditForm((p) => ({ ...p, district: v }))}
+            />
+            <Input
+              label="Town"
+              value={editForm.town}
+              onChange={(v) => setEditForm((p) => ({ ...p, town: v }))}
+            />
+            <Input
+              label="Address"
+              value={editForm.address}
+              onChange={(v) => setEditForm((p) => ({ ...p, address: v }))}
+            />
+            <Input
+              label="Level"
+              value={editForm.selectedLevel}
+              onChange={(v) => setEditForm((p) => ({ ...p, selectedLevel: v }))}
+            />
+            <Input
+              label="Grade"
+              value={editForm.selectedGradeNumber}
+              onChange={(v) =>
+                setEditForm((p) => ({ ...p, selectedGradeNumber: v }))
+              }
+            />
+            <Input
+              label="Class Name"
+              value={editForm.className}
+              onChange={(v) => setEditForm((p) => ({ ...p, className: v }))}
+            />
+          </div>
+        </Modal>
+
+        <Modal
+          open={banConfirmOpen}
+          title={selected?.isActive === false ? "Unban Student" : "Ban Student"}
+          onClose={() => setBanConfirmOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setBanConfirmOpen(false)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doBanToggle}
+                disabled={banning || unbanning}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 disabled:opacity-60"
+              >
+                {banning || unbanning
+                  ? "Processing..."
+                  : selected?.isActive === false
+                  ? "Unban"
+                  : "Ban"}
+              </button>
+            </div>
+          }
+        >
+          <div className="text-sm text-gray-700">
+            {selected?.isActive === false
+              ? "Are you sure you want to unban this student?"
+              : "Are you sure you want to ban this student?"}
+          </div>
+        </Modal>
+
+        <Modal
+          open={deleteConfirm1Open}
+          title="Delete Student"
+          onClose={() => setDeleteConfirm1Open(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm1Open(false)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doDeleteStep1}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                Continue
+              </button>
+            </div>
+          }
+        >
+          <div className="text-sm text-gray-700">
+            This action will permanently remove the student record.
+          </div>
+        </Modal>
+
+        <Modal
+          open={deleteConfirm2Open}
+          title="Confirm Delete"
+          onClose={() => setDeleteConfirm2Open(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm2Open(false)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doDeleteFinal}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          }
+        >
+          <div className="text-sm text-gray-700">
+            Please confirm again. This action cannot be undone.
+          </div>
+        </Modal>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+// src/pages/ViewPaperQuestions.page.jsx
 import React, { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetQuestionsByPaperQuery } from "../api/questionApi";
@@ -30,14 +31,17 @@ export default function ViewPaperQuestionsPage() {
   const currentCount = Number(progress?.currentCount || questions.length || 0);
 
   const sorted = useMemo(
-    () => [...questions].sort((a, b) => Number(a.questionNumber) - Number(b.questionNumber)),
+    () =>
+      [...questions].sort(
+        (a, b) => Number(a.questionNumber) - Number(b.questionNumber)
+      ),
     [questions]
   );
 
   if (isLoading) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] px-3 py-6">
+        <div className="w-full max-w-xl border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
           Loading questions...
         </div>
       </div>
@@ -46,22 +50,22 @@ export default function ViewPaperQuestionsPage() {
 
   if (isError) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 w-full max-w-2xl">
-          <div className="text-lg font-extrabold text-red-700">Failed to load</div>
-          <div className="text-sm text-gray-700 mt-2">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] px-3 py-6">
+        <div className="w-full max-w-2xl border border-gray-200 bg-white p-6">
+          <div className="text-lg font-semibold text-red-600">Failed to load</div>
+          <div className="mt-2 text-sm text-gray-700">
             {error?.data?.message || error?.error || "Unknown error"}
           </div>
           <div className="mt-4 flex gap-2">
             <button
               onClick={() => refetch()}
-              className="rounded-xl bg-blue-700 px-4 py-2 text-white font-bold hover:bg-blue-800"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               Retry
             </button>
             <button
               onClick={() => navigate("/paper/papers")}
-              className="rounded-xl border border-gray-300 px-4 py-2 font-bold hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
               Back
             </button>
@@ -73,8 +77,8 @@ export default function ViewPaperQuestionsPage() {
 
   if (!paper) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] px-3 py-6">
+        <div className="w-full max-w-xl border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
           Paper not found
         </div>
       </div>
@@ -82,129 +86,203 @@ export default function ViewPaperQuestionsPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#F7F6F6] px-3 py-6">
-      <div className="mx-auto w-full max-w-4xl bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-2xl font-extrabold text-blue-800">View Questions</div>
-            <div className="text-sm text-gray-700 mt-1">
-              Paper: <b>{paper?.paperTitle}</b>
-            </div>
-            <div className="text-sm text-gray-700">
-              Progress: <b>{currentCount}</b> / <b>{requiredCount}</b>
-            </div>
-            
-          </div>
+    <div className="flex w-full justify-center bg-[#F8FAFC]">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto w-full max-w-5xl">
+          {/* Header */}
+          <div className="border border-gray-200 bg-white p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+                  View Questions
+                </h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Review the questions, answers, and explanations for this paper.
+                </p>
 
-          <div className="flex gap-2">
-            
-            <button
-              onClick={() => navigate("/paper/papers")}
-              className="rounded-xl border border-gray-300 px-4 py-2 font-bold hover:bg-gray-50"
-            >
-              Back
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-4">
-          {sorted.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-gray-700">
-              No questions added yet.
-            </div>
-          ) : (
-            sorted.map((q) => {
-              const answers = Array.isArray(q?.answers) ? q.answers : [];
-              const correctSet = new Set(getCorrect(q));
-
-              return (
-                <div key={q._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-                  <div className="p-5 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-                    <div className="text-sm font-extrabold text-gray-900">
-                      Question #{q?.questionNumber}
-                    </div>
-
-                    {!!q?.lessonName && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        Lesson: <b>{q.lessonName}</b>
-                      </div>
-                    )}
-
-                    <div className="text-sm text-gray-800 mt-2 whitespace-pre-wrap">{q?.question}</div>
-
-                    {!!q?.imageUrl && (
-                      <div className="mt-4">
-                        <img
-                          src={q.imageUrl}
-                          alt="question"
-                          className="max-h-72 rounded-xl border border-gray-200"
-                        />
-                      </div>
-                    )}
+                <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                  <div>
+                    Paper:{" "}
+                    <span className="font-medium text-gray-900">
+                      {paper?.paperTitle}
+                    </span>
                   </div>
-
-                  <div className="p-5">
-                    <div className="text-sm font-extrabold text-gray-800 mb-3">Answers</div>
-
-                    <div className="space-y-2">
-                      {answers.map((a, idx) => {
-                        const isCorrect = correctSet.has(idx);
-
-                        // ✅ FIX "height blu" issue:
-                        // use items-stretch + py + min-h so the blue bg covers full height nicely
-                        return (
-                          <div
-                            key={idx}
-                            className={[
-                              "w-full rounded-xl border px-4 py-3 text-sm flex gap-3 items-stretch",
-                              isCorrect
-                                ? "border-blue-600 bg-blue-600 text-white font-extrabold"
-                                : "border-gray-200 bg-white text-gray-800",
-                            ].join(" ")}
-                          >
-                            <div
-                              className={[
-                                "w-7 min-h-7 rounded-lg flex items-center justify-center text-xs font-extrabold",
-                                isCorrect ? "bg-white text-blue-700" : "bg-gray-100 text-gray-700",
-                              ].join(" ")}
-                            >
-                              {idx + 1}
-                            </div>
-
-                            <div className="flex-1 whitespace-pre-wrap leading-6">{a}</div>
-
-                            {isCorrect && (
-                              <div className="text-xs font-extrabold uppercase tracking-wide self-center">
-                                Correct
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {(q?.explanationVideoUrl || q?.explanationText) && (
-                      <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                        <div className="text-sm font-extrabold text-gray-800">Explanation</div>
-
-                        {!!q?.explanationVideoUrl && (
-                          <div className="text-xs text-blue-700 font-bold mt-2 break-all">
-                            Video: {q.explanationVideoUrl}
-                          </div>
-                        )}
-
-                        {!!q?.explanationText && (
-                          <div className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">
-                            {q.explanationText}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  <div>
+                    Progress:{" "}
+                    <span className="font-medium text-gray-900">
+                      {currentCount}
+                    </span>{" "}
+                    /{" "}
+                    <span className="font-medium text-gray-900">
+                      {requiredCount}
+                    </span>
                   </div>
                 </div>
-              );
-            })
-          )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/paper/papers")}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                >
+                  Back
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/home")}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                  title="Home"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 10.5 12 3l9 7.5" />
+                    <path d="M5 9.5V21h14V9.5" />
+                    <path d="M9 21v-6h6v6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Questions */}
+          <div className="mt-5 space-y-5">
+            {sorted.length === 0 ? (
+              <div className="border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
+                No questions added yet.
+              </div>
+            ) : (
+              sorted.map((q) => {
+                const answers = Array.isArray(q?.answers) ? q.answers : [];
+                const correctSet = new Set(getCorrect(q));
+
+                return (
+                  <div key={q._id} className="border border-gray-200 bg-white">
+                    {/* Question header */}
+                    <div className="border-b border-gray-200 bg-[#F8FAFC] px-5 py-4 sm:px-6">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">
+                            Question #{q?.questionNumber}
+                          </div>
+
+                          {!!q?.lessonName && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              Lesson:{" "}
+                              <span className="font-medium text-gray-700">
+                                {q.lessonName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-600">
+                          {answers.length} Options
+                        </span>
+                      </div>
+
+                      <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-800">
+                        {q?.question}
+                      </div>
+
+                      {!!q?.imageUrl && (
+                        <div className="mt-4">
+                          <img
+                            src={q.imageUrl}
+                            alt="question"
+                            className="max-h-72 rounded-lg border border-gray-200 object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Answers section */}
+                    <div className="px-5 py-5 sm:px-6">
+                      <div className="mb-3 text-sm font-medium text-gray-800">
+                        Answers
+                      </div>
+
+                      <div className="space-y-2">
+                        {answers.map((a, idx) => {
+                          const isCorrect = correctSet.has(idx);
+
+                          return (
+                            <div
+                              key={idx}
+                              className={[
+                                "flex items-start gap-3 border px-4 py-3",
+                                isCorrect
+                                  ? "border-green-200 bg-green-50"
+                                  : "border-gray-200 bg-white",
+                              ].join(" ")}
+                            >
+                              <div
+                                className={[
+                                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-medium",
+                                  isCorrect
+                                    ? "bg-green-600 text-white"
+                                    : "bg-gray-100 text-gray-700",
+                                ].join(" ")}
+                              >
+                                {idx + 1}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div
+                                  className={[
+                                    "whitespace-pre-wrap text-sm leading-6",
+                                    isCorrect
+                                      ? "font-medium text-gray-900"
+                                      : "text-gray-800",
+                                  ].join(" ")}
+                                >
+                                  {a}
+                                </div>
+                              </div>
+
+                              {isCorrect && (
+                                <span className="shrink-0 rounded-md border border-green-200 bg-white px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-green-700">
+                                  Correct
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Explanation */}
+                      {(q?.explanationVideoUrl || q?.explanationText) && (
+                        <div className="mt-5 border border-gray-200 bg-[#F8FAFC] p-4">
+                          <div className="text-sm font-medium text-gray-800">
+                            Explanation
+                          </div>
+
+                          {!!q?.explanationVideoUrl && (
+                            <div className="mt-2 break-all text-sm text-blue-600">
+                              {q.explanationVideoUrl}
+                            </div>
+                          )}
+
+                          {!!q?.explanationText && (
+                            <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                              {q.explanationText}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

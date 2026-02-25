@@ -1,3 +1,4 @@
+// src/pages/CreatePaperQuestions.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -25,21 +26,27 @@ const Dropzone = ({ onFile }) => {
         if (f) onFile?.(f);
       }}
       className={[
-        "w-full rounded-xl border border-dashed px-4 py-4 text-sm",
-        drag ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50",
+        "w-full border border-dashed px-4 py-4 text-sm transition",
+        drag ? "border-blue-400 bg-blue-50" : "border-gray-300 bg-[#F8FAFC]",
       ].join(" ")}
     >
-      <div className="font-semibold text-gray-800">Drag & drop image here</div>
-      <div className="text-xs text-gray-600 mt-1">or choose file</div>
-      <input
-        type="file"
-        accept="image/*"
-        className="mt-2"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onFile?.(f);
-        }}
-      />
+      <div className="text-sm font-medium text-gray-800">Drag and drop image here</div>
+      <div className="mt-1 text-xs text-gray-500">or choose a file</div>
+
+      <div className="mt-3">
+        <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700">
+          Choose File
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onFile?.(f);
+            }}
+          />
+        </label>
+      </div>
     </div>
   );
 };
@@ -64,14 +71,15 @@ export default function CreatePaperQuestionsPage() {
     progress?.requiredCount || paper?.questionCount || 0
   );
 
-  // ✅ UI default (paper setting), but allow change per question
   const defaultAnswerCount = Number(
     progress?.oneQuestionAnswersCount || paper?.oneQuestionAnswersCount || 4
   );
 
   const nextNumber = useMemo(() => {
     const used = new Set(questions.map((q) => Number(q.questionNumber)));
-    for (let i = 1; i <= requiredCount; i++) if (!used.has(i)) return i;
+    for (let i = 1; i <= requiredCount; i++) {
+      if (!used.has(i)) return i;
+    }
     return requiredCount + 1;
   }, [questions, requiredCount]);
 
@@ -81,19 +89,19 @@ export default function CreatePaperQuestionsPage() {
     question: "",
     lessonName: "",
     answers: [],
-    correctAnswerIndexes: [], // ✅ multi correct
+    correctAnswerIndexes: [],
     explanationVideoUrl: "",
     explanationText: "",
     imageUrl: "",
   });
 
-  // init answers length
   useEffect(() => {
     setForm((prev) => {
       const nextAnswers = Array.from(
         { length: Math.max(defaultAnswerCount, 1) },
         (_, i) => prev.answers?.[i] || ""
       );
+
       return {
         ...prev,
         answers: nextAnswers,
@@ -107,7 +115,11 @@ export default function CreatePaperQuestionsPage() {
       const set = new Set((p.correctAnswerIndexes || []).map(Number));
       if (set.has(i)) set.delete(i);
       else set.add(i);
-      return { ...p, correctAnswerIndexes: Array.from(set).sort((a, b) => a - b) };
+
+      return {
+        ...p,
+        correctAnswerIndexes: Array.from(set).sort((a, b) => a - b),
+      };
     });
   };
 
@@ -126,7 +138,6 @@ export default function CreatePaperQuestionsPage() {
 
       const nextAnswers = cur.filter((_, i) => i !== indexToRemove);
 
-      // fix correct indexes after removal
       const nextCorrect = (p.correctAnswerIndexes || [])
         .map(Number)
         .filter((x) => Number.isFinite(x))
@@ -203,10 +214,7 @@ export default function CreatePaperQuestionsPage() {
       lessonName: norm(form.lessonName),
       question: norm(form.question),
       answers: cleanedAnswers,
-
-      // ✅ send multi correct
       correctAnswerIndexes: [...new Set(idxs)].sort((a, b) => a - b),
-
       explanationVideoUrl: norm(form.explanationVideoUrl),
       explanationText: norm(form.explanationText),
       imageUrl: norm(form.imageUrl),
@@ -225,8 +233,8 @@ export default function CreatePaperQuestionsPage() {
 
   if (isLoading) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] px-3 py-6">
+        <div className="w-full max-w-xl border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
           Loading...
         </div>
       </div>
@@ -235,8 +243,8 @@ export default function CreatePaperQuestionsPage() {
 
   if (!paper) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] px-3 py-6">
+        <div className="w-full max-w-xl border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
           Paper not found
         </div>
       </div>
@@ -246,211 +254,263 @@ export default function CreatePaperQuestionsPage() {
   const answerCount = (form.answers || []).length;
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-[#F7F6F6] px-3">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-extrabold text-blue-800 mb-1">
-              Create Questions
-            </h1>
-            <div className="text-sm text-gray-700">
-              Paper: <b>{paper.paperTitle}</b>
-            </div>
-            <div className="text-sm text-gray-700">
-              Progress: <b>{progress?.currentCount || 0}</b> / <b>{requiredCount}</b>
-            </div>
-            <div className="text-sm text-gray-700">
-              Answers (this question): <b>{answerCount}</b> (min 1, max 6)
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              ✅ Correct answers can be 1 or more (multiple)
-            </div>
-          </div>
+    <div className="flex w-full justify-center">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto w-full max-w-5xl">
+          {/* Header */}
+          <div className="border border-gray-200 bg-white p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+                  Create Questions
+                </h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Add questions, answers, images, and explanations for this paper.
+                </p>
 
-          <button
-            onClick={() => navigate(`/paper/${paperId}/questions/view`)}
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-bold hover:bg-gray-50"
-          >
-            View All
-          </button>
-        </div>
-
-        <div className="mt-5 bg-gray-50 border border-gray-200 rounded-2xl p-5">
-          <div className="text-sm font-extrabold text-gray-800">
-            Question #{nextNumber} {isLast ? "(Last)" : ""}
-          </div>
-
-          {/* Question */}
-          <div className="mt-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Question
-            </label>
-            <input
-              value={form.question}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, question: e.target.value }))
-              }
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-            />
-          </div>
-
-          {/* Lesson name */}
-          <div className="mt-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Lesson Name
-            </label>
-            <input
-              value={form.lessonName}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, lessonName: e.target.value }))
-              }
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-            />
-          </div>
-
-          {/* Image upload */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between gap-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                Question Image
-              </label>
+                <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                  <div>
+                    Paper:{" "}
+                    <span className="font-medium text-gray-900">
+                      {paper.paperTitle}
+                    </span>
+                  </div>
+                  <div>
+                    Progress:{" "}
+                    <span className="font-medium text-gray-900">
+                      {progress?.currentCount || 0}
+                    </span>{" "}
+                    /{" "}
+                    <span className="font-medium text-gray-900">
+                      {requiredCount}
+                    </span>
+                  </div>
+                  <div>
+                    Current Answer Count:{" "}
+                    <span className="font-medium text-gray-900">{answerCount}</span>
+                  </div>
+                  <div>
+                    Mode:{" "}
+                    <span className="font-medium text-gray-900">
+                      Multiple correct answers supported
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               <button
-                type="button"
-                onClick={() => setForm((p) => ({ ...p, imageUrl: "" }))}
-                className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100"
+                onClick={() => navigate(`/paper/${paperId}/questions/view`)}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
-                Clear
+                View All
               </button>
             </div>
+          </div>
 
-            <div className="mt-2">
-              <Dropzone onFile={onUploadImage} />
-              {isUploading && (
-                <div className="text-xs text-gray-600 mt-1">Uploading...</div>
-              )}
+          {/* Form */}
+          <div className="mt-5 border border-gray-200 bg-white p-5 sm:p-6">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-base font-medium text-gray-900">
+                Question #{nextNumber} {isLast ? "- Final Question" : ""}
+              </div>
+              <div className="text-xs text-gray-500">
+                Minimum 1 answer, maximum 6 answers
+              </div>
             </div>
 
-            {!!form.imageUrl && (
-              <div className="mt-3">
-                <div className="text-xs text-gray-600 mb-2">Preview</div>
-                <img
-                  src={form.imageUrl}
-                  alt="question"
-                  className="max-h-56 rounded-xl border border-gray-200"
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Question */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Question
+                </label>
+                <textarea
+                  rows={3}
+                  value={form.question}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, question: e.target.value }))
+                  }
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Enter the question"
                 />
               </div>
-            )}
-          </div>
 
-          {/* Answers */}
-          <div className="mt-5">
-            <div className="flex items-center justify-between gap-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                Answers (multi correct supported)
-              </label>
+              {/* Lesson name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Lesson Name
+                </label>
+                <input
+                  value={form.lessonName}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, lessonName: e.target.value }))
+                  }
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Enter lesson name"
+                />
+              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={addAnswer}
-                  disabled={answerCount >= 6}
-                  className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100 disabled:opacity-60"
-                >
-                  + Add Answer
-                </button>
+              {/* Explanation video */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Explanation Video URL
+                </label>
+                <input
+                  value={form.explanationVideoUrl}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      explanationVideoUrl: e.target.value,
+                    }))
+                  }
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="https://youtube.com/..."
+                />
+              </div>
+
+              {/* Image upload */}
+              <div className="md:col-span-2">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Question Image
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, imageUrl: "" }))}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <Dropzone onFile={onUploadImage} />
+
+                {isUploading && (
+                  <div className="mt-2 text-xs text-gray-500">Uploading...</div>
+                )}
+
+                {!!form.imageUrl && (
+                  <div className="mt-4">
+                    <div className="mb-2 text-xs font-medium text-gray-600">
+                      Preview
+                    </div>
+                    <img
+                      src={form.imageUrl}
+                      alt="question"
+                      className="max-h-56 rounded-lg border border-gray-200 object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Answers */}
+              <div className="md:col-span-2">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Answers
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={addAnswer}
+                    disabled={answerCount >= 6}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    Add Answer
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {Array.from({ length: answerCount }, (_, i) => {
+                    const val = form.answers?.[i] || "";
+                    const checked = (form.correctAnswerIndexes || [])
+                      .map(Number)
+                      .includes(i);
+
+                    return (
+                      <div
+                        key={i}
+                        className={[
+                          "border p-3",
+                          checked
+                            ? "border-green-200 bg-green-50"
+                            : "border-gray-200 bg-white",
+                        ].join(" ")}
+                      >
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                          <div className="w-full lg:w-[90px]">
+                            <span className="inline-flex h-8 items-center rounded-md bg-gray-100 px-3 text-xs font-medium text-gray-700">
+                              Answer {i + 1}
+                            </span>
+                          </div>
+
+                          <input
+                            value={val}
+                            onChange={(e) => {
+                              const copy = [...(form.answers || [])];
+                              copy[i] = e.target.value;
+                              setForm((p) => ({ ...p, answers: copy }));
+                            }}
+                            className="h-10 flex-1 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                            placeholder={`Enter answer ${i + 1}`}
+                          />
+
+                          <label className="flex min-w-[90px] items-center gap-2 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCorrect(i)}
+                            />
+                            <span className="font-medium">Correct</span>
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => removeAnswer(i)}
+                            disabled={answerCount <= 1}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-2 text-xs text-gray-500">
+                  Select one or more correct answers.
+                </div>
+              </div>
+
+              {/* Explanation Notes */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Explanation Notes
+                </label>
+                <textarea
+                  rows={4}
+                  value={form.explanationText}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, explanationText: e.target.value }))
+                  }
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Write the explanation here"
+                />
               </div>
             </div>
 
-            <div className="space-y-3 mt-3">
-              {Array.from({ length: answerCount }, (_, i) => {
-                const val = form.answers?.[i] || "";
-                const checked =
-                  (form.correctAnswerIndexes || []).map(Number).includes(i);
-
-                return (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-20 text-sm text-gray-800 font-semibold">
-                      Answer {i + 1}
-                    </div>
-
-                    <input
-                      value={val}
-                      onChange={(e) => {
-                        const copy = [...(form.answers || [])];
-                        copy[i] = e.target.value;
-                        setForm((p) => ({ ...p, answers: copy }));
-                      }}
-                      className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                    />
-
-                    <label className="text-xs text-gray-700 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleCorrect(i)}
-                      />
-                      Correct
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => removeAnswer(i)}
-                      disabled={answerCount <= 1}
-                      className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100 disabled:opacity-60"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                );
-              })}
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={!canSave || isSaving}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : isLast ? "Submit" : "Next Question"}
+              </button>
             </div>
-
-            <div className="text-xs text-gray-500 mt-2">
-              ✅ Select 1 or more correct answers.
-            </div>
-          </div>
-
-          {/* Explanation URL */}
-          <div className="mt-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Explanation Video URL
-            </label>
-            <input
-              value={form.explanationVideoUrl}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, explanationVideoUrl: e.target.value }))
-              }
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              placeholder="https://youtube.com/..."
-            />
-          </div>
-
-          {/* Explanation Notes */}
-          <div className="mt-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Explanation Notes / Logic
-            </label>
-            <textarea
-              rows={4}
-              value={form.explanationText}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, explanationText: e.target.value }))
-              }
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              placeholder="Write explanation logic here..."
-            />
-          </div>
-
-          <div className="mt-5 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={!canSave || isSaving}
-              className="rounded-xl bg-blue-700 px-5 py-2 text-white font-extrabold hover:bg-blue-800 transition disabled:opacity-60"
-            >
-              {isSaving ? "Saving..." : isLast ? "Submit" : "Next Question"}
-            </button>
           </div>
         </div>
       </div>

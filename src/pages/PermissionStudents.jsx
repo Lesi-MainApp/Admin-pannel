@@ -1,4 +1,6 @@
+// src/pages/PermissionStudents.page.jsx
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useApproveEnrollMutation,
   useGetPendingEnrollRequestsQuery,
@@ -6,6 +8,7 @@ import {
 } from "../api/enrollApi";
 
 const PermissionStudents = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, error, refetch } =
@@ -53,49 +56,85 @@ const PermissionStudents = () => {
   };
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
-          Student Pending Requests
-        </h1>
+    <div className="flex w-full justify-center ">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Student Enrollment Requests
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Review and approve or reject pending student class requests.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refetch}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+            >
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/home")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
+              title="Home"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5 9.5V21h14V9.5" />
+                <path d="M9 21v-6h6v6" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
         {/* top controls */}
-        <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <button
-            onClick={refetch}
-            className="rounded-xl px-4 py-2 font-extrabold bg-gray-100 hover:bg-gray-200 w-fit"
-          >
-            Refresh
-          </button>
-
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name / email / class / subject..."
-            className="w-full sm:w-[360px] rounded-xl border border-gray-300 px-3 py-2"
+            className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300 sm:w-[380px]"
           />
         </div>
 
         {/* state */}
-        <div className="mt-4">
+        <div className="mt-5">
           {isLoading ? (
-            <div className="text-center text-gray-500">Loading...</div>
+            <div className="border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
+              Loading...
+            </div>
           ) : isError ? (
-            <div className="text-center text-red-600 font-bold">
-              Error: {String(error?.data?.message || error?.error || "Failed")}
-              <div className="mt-2">
+            <div className="border border-gray-200 bg-white px-6 py-10 text-center">
+              <div className="text-red-600">
+                Error: {String(error?.data?.message || error?.error || "Failed")}
+              </div>
+              <div className="mt-3">
                 <button
                   onClick={refetch}
-                  className="rounded-xl bg-gray-100 hover:bg-gray-200 px-4 py-2 font-extrabold"
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                 >
                   Retry
                 </button>
               </div>
             </div>
           ) : pendingRequests.length === 0 ? (
-            <div className="text-center text-gray-500">No pending requests</div>
+            <div className="border border-gray-200 bg-white px-6 py-10 text-center text-gray-500">
+              No pending requests
+            </div>
           ) : (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {pendingRequests.map((r) => {
                 const cd = r?.classDetails || {};
                 const teachersText = (cd.teachers || []).join(", ") || "-";
@@ -103,50 +142,58 @@ const PermissionStudents = () => {
                 return (
                   <div
                     key={r._id}
-                    className="rounded-2xl bg-white shadow-sm border border-gray-200 overflow-hidden"
+                    className="border border-gray-200 bg-white"
                   >
-                    <div className="p-4 flex flex-col h-full">
+                    <div className="flex h-full flex-col p-5">
                       {/* header */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="text-lg font-extrabold text-gray-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-base font-medium text-gray-900">
                             {r.studentName}
                           </div>
-                          <div className="text-sm text-gray-600">{r.studentEmail}</div>
-                          <div className="text-sm text-gray-600">{r.studentPhone}</div>
+                          <div className="mt-1 truncate text-sm text-gray-600">
+                            {r.studentEmail}
+                          </div>
+                          <div className="mt-1 truncate text-sm text-gray-600">
+                            {r.studentPhone}
+                          </div>
                         </div>
 
-                        <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                          PENDING
+                        <span className="inline-flex items-center rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-1 text-[11px] font-medium text-yellow-700">
+                          Pending
                         </span>
                       </div>
 
                       {/* details */}
-                      <div className="mt-3 text-sm text-gray-700 space-y-1">
+                      <div className="mt-4 space-y-2 text-sm text-gray-700">
                         <div>
-                          <span className="font-bold">Class:</span> {cd.className || "-"}
+                          <span className="font-medium text-gray-800">Class:</span>{" "}
+                          {cd.className || "-"}
                         </div>
                         <div>
-                          <span className="font-bold">Grade:</span> {cd.grade ?? "-"}
+                          <span className="font-medium text-gray-800">Grade:</span>{" "}
+                          {cd.grade ?? "-"}
                         </div>
                         <div>
-                          <span className="font-bold">Subject:</span> {cd.subject || "-"}
+                          <span className="font-medium text-gray-800">Subject:</span>{" "}
+                          {cd.subject || "-"}
                         </div>
                         <div>
-                          <span className="font-bold">Teacher:</span> {teachersText}
+                          <span className="font-medium text-gray-800">Teacher:</span>{" "}
+                          {teachersText}
                         </div>
                         <div>
-                          <span className="font-bold">Requested:</span>{" "}
+                          <span className="font-medium text-gray-800">Requested:</span>{" "}
                           {r.createdAt ? new Date(r.createdAt).toLocaleString() : "-"}
                         </div>
                       </div>
 
                       {/* footer pinned bottom */}
-                      <div className="mt-auto pt-4 flex justify-end gap-2">
+                      <div className="mt-auto flex justify-end gap-2 pt-5">
                         <button
                           onClick={() => onReject(r._id)}
                           disabled={rejecting}
-                          className="rounded-xl bg-red-600 px-4 py-2 text-white font-extrabold hover:bg-red-700 transition disabled:opacity-50"
+                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
                         >
                           Reject
                         </button>
@@ -154,7 +201,7 @@ const PermissionStudents = () => {
                         <button
                           onClick={() => onApprove(r._id)}
                           disabled={approving}
-                          className="rounded-xl bg-green-600 px-4 py-2 text-white font-extrabold hover:bg-green-700 transition disabled:opacity-50"
+                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
                         >
                           Approve
                         </button>

@@ -1,5 +1,6 @@
 // src/pages/lms.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   useGetAllLessonsQuery,
@@ -10,6 +11,8 @@ import {
 
 import { useGetAllClassesQuery } from "../api/classApi";
 
+const ROWS_PER_PAGE = 20;
+
 const ModalShell = ({ title, onClose, children }) => {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
@@ -19,12 +22,12 @@ const ModalShell = ({ title, onClose, children }) => {
         role="button"
         tabIndex={-1}
       />
-      <div className="relative w-[95vw] max-w-[720px] bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
-          <div className="font-extrabold text-blue-800">{title}</div>
+      <div className="relative w-[95vw] max-w-[720px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-[#F8FAFC] px-4 py-4 sm:px-6">
+          <div className="text-base font-semibold text-gray-800">{title}</div>
           <button
             type="button"
-            className="rounded-lg bg-gray-700 px-3 py-1 text-white text-xs font-bold hover:bg-gray-800"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
             onClick={onClose}
           >
             Close
@@ -36,7 +39,23 @@ const ModalShell = ({ title, onClose, children }) => {
   );
 };
 
+const IconButton = ({ onClick, title, children, disabled = false }) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {children}
+    </button>
+  );
+};
+
 const LMSPage = () => {
+  const navigate = useNavigate();
+
   // ===== APIs =====
   const {
     data: lessonsRes,
@@ -51,18 +70,30 @@ const LMSPage = () => {
   } = useGetAllClassesQuery();
 
   const [createLesson, { isLoading: isCreating }] = useCreateLessonMutation();
-  const [updateLessonById, { isLoading: isUpdating }] = useUpdateLessonByIdMutation();
-  const [deleteLessonById, { isLoading: isDeleting }] = useDeleteLessonByIdMutation();
+  const [updateLessonById, { isLoading: isUpdating }] =
+    useUpdateLessonByIdMutation();
+  const [deleteLessonById, { isLoading: isDeleting }] =
+    useDeleteLessonByIdMutation();
 
   const classes = classesRes?.classes || [];
   const lessons = lessonsRes?.lessons || [];
 
   // ===== UI state (modals) =====
-  const [modal, setModal] = useState({ open: false, mode: "create", lessonId: null });
+  const [modal, setModal] = useState({
+    open: false,
+    mode: "create",
+    lessonId: null,
+  });
 
-  const openCreate = () => setModal({ open: true, mode: "create", lessonId: null });
-  const openEdit = (lesson) => setModal({ open: true, mode: "edit", lessonId: lesson?._id || null });
-  const closeModal = () => setModal({ open: false, mode: "create", lessonId: null });
+  const openCreate = () =>
+    setModal({ open: true, mode: "create", lessonId: null });
+  const openEdit = (lesson) =>
+    setModal({ open: true, mode: "edit", lessonId: lesson?._id || null });
+  const closeModal = () =>
+    setModal({ open: false, mode: "create", lessonId: null });
+
+  // ===== Pagination =====
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ===== Form =====
   const [form, setForm] = useState({
@@ -84,14 +115,13 @@ const LMSPage = () => {
   const autoInfo = useMemo(() => {
     if (!selectedClass) return { grade: "", subject: "", teacherName: "" };
 
-    const grade =
-      selectedClass?.gradeNo
-        ? `Grade ${selectedClass.gradeNo}`
-        : selectedClass?.gradeId?.grade
-        ? `Grade ${selectedClass.gradeId.grade}`
-        : selectedClass?.grade
-        ? `Grade ${selectedClass.grade}`
-        : "";
+    const grade = selectedClass?.gradeNo
+      ? `Grade ${selectedClass.gradeNo}`
+      : selectedClass?.gradeId?.grade
+      ? `Grade ${selectedClass.gradeId.grade}`
+      : selectedClass?.grade
+      ? `Grade ${selectedClass.grade}`
+      : "";
 
     const subject = selectedClass?.subjectName || selectedClass?.subject || "";
 
@@ -140,13 +170,16 @@ const LMSPage = () => {
   useEffect(() => {
     if (!modal.open || modal.mode !== "edit") return;
 
-    const lesson = lessons.find((l) => String(l?._id) === String(modal.lessonId));
+    const lesson = lessons.find(
+      (l) => String(l?._id) === String(modal.lessonId)
+    );
     if (!lesson) return;
 
     const classId = lesson?.classId || "";
 
-    const grade =
-      lesson?.classDetails?.grade ? `Grade ${lesson.classDetails.grade}` : "";
+    const grade = lesson?.classDetails?.grade
+      ? `Grade ${lesson.classDetails.grade}`
+      : "";
 
     const subject = lesson?.classDetails?.subject || "";
 
@@ -170,9 +203,12 @@ const LMSPage = () => {
   const rows = useMemo(() => {
     return lessons.map((l) => {
       const className = l?.classDetails?.className || "—";
-      const grade = l?.classDetails?.grade ? `Grade ${l.classDetails.grade}` : "—";
+      const grade = l?.classDetails?.grade
+        ? `Grade ${l.classDetails.grade}`
+        : "—";
       const subject = l?.classDetails?.subject || "—";
-      const teacher = (l?.classDetails?.teachers || []).join(", ") || "No Teacher";
+      const teacher =
+        (l?.classDetails?.teachers || []).join(", ") || "No Teacher";
 
       return {
         _id: l._id,
@@ -189,6 +225,29 @@ const LMSPage = () => {
       };
     });
   }, [lessons]);
+
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    return rows.slice(start, end);
+  }, [rows, currentPage]);
+
+  const startRecord = totalRows === 0 ? 0 : (currentPage - 1) * ROWS_PER_PAGE + 1;
+  const endRecord = totalRows === 0 ? 0 : Math.min(currentPage * ROWS_PER_PAGE, totalRows);
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToPrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
+  const goToNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
+  const goToLastPage = () => setCurrentPage(totalPages);
 
   // ===== Actions =====
   const validate = () => {
@@ -216,6 +275,7 @@ const LMSPage = () => {
         youtubeUrl: form.youtubeUrl || "",
       }).unwrap();
       closeModal();
+      setCurrentPage(1);
     } catch (e) {
       alert(e?.data?.message || "Create failed");
     }
@@ -255,19 +315,47 @@ const LMSPage = () => {
   const formLoading = classesLoading || lessonsLoading;
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
-          LMS
-        </h1>
+    <div className="flex w-full justify-center ">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Learning Management System
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Manage lesson schedules, links, and class details.
+            </p>
+          </div>
 
-        <div className="mt-4 flex justify-end">
-          <button
-            className="rounded-xl bg-green-600 px-4 py-2 text-white font-extrabold hover:bg-green-700 transition"
-            onClick={openCreate}
-          >
-            + Add LMS
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+              onClick={openCreate}
+            >
+              + Add Lesson
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/home")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
+              title="Home"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5 9.5V21h14V9.5" />
+                <path d="M9 21v-6h6v6" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* CREATE / EDIT MODAL */}
@@ -277,18 +365,18 @@ const LMSPage = () => {
             onClose={closeModal}
           >
             {formLoading ? (
-              <div className="text-gray-500 font-bold">Loading...</div>
+              <div className="text-sm text-gray-500">Loading...</div>
             ) : classesError ? (
-              <div className="text-red-600 font-bold">Failed to load classes</div>
+              <div className="text-sm text-red-600">Failed to load classes</div>
             ) : (
               <div className="space-y-4">
                 {/* Class dropdown */}
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Class Name <span className="text-red-600">*</span>
                   </label>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.classId}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, classId: e.target.value }))
@@ -304,35 +392,35 @@ const LMSPage = () => {
                 </div>
 
                 {/* Auto fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800">
-                      Grade (Auto)
+                    <label className="block text-sm font-medium text-gray-700">
+                      Grade
                     </label>
                     <input
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none bg-gray-50"
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm outline-none"
                       value={form.grade}
                       disabled
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800">
-                      Subject (Auto)
+                    <label className="block text-sm font-medium text-gray-700">
+                      Subject
                     </label>
                     <input
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none bg-gray-50"
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm outline-none"
                       value={form.subject}
                       disabled
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800">
-                      Teacher Name (Auto)
+                    <label className="block text-sm font-medium text-gray-700">
+                      Teacher Name
                     </label>
                     <input
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none bg-gray-50"
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm outline-none"
                       value={form.teacherName}
                       disabled
                     />
@@ -341,11 +429,11 @@ const LMSPage = () => {
 
                 {/* YouTube link */}
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     YouTube Link
                   </label>
                   <input
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.youtubeUrl}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, youtubeUrl: e.target.value }))
@@ -356,11 +444,11 @@ const LMSPage = () => {
 
                 {/* Lesson name */}
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Lesson Name <span className="text-red-600">*</span>
                   </label>
                   <input
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.title}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, title: e.target.value }))
@@ -371,11 +459,11 @@ const LMSPage = () => {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Description
                   </label>
                   <textarea
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 min-h-[90px]"
+                    className="mt-2 min-h-[90px] w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.description}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, description: e.target.value }))
@@ -385,14 +473,14 @@ const LMSPage = () => {
                 </div>
 
                 {/* Date + Time */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800">
+                    <label className="block text-sm font-medium text-gray-700">
                       Date <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="date"
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                       value={form.date}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, date: e.target.value }))
@@ -401,12 +489,12 @@ const LMSPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-extrabold text-gray-800">
+                    <label className="block text-sm font-medium text-gray-700">
                       Time <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="time"
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                       value={form.time}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, time: e.target.value }))
@@ -416,10 +504,10 @@ const LMSPage = () => {
                 </div>
 
                 {/* Buttons */}
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    className="rounded-lg bg-gray-700 px-4 py-2 text-white text-sm font-extrabold hover:bg-gray-800"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                     onClick={closeModal}
                   >
                     Cancel
@@ -428,7 +516,7 @@ const LMSPage = () => {
                   {modal.mode === "create" ? (
                     <button
                       type="button"
-                      className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-green-700"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                       onClick={submitCreate}
                       disabled={isCreating}
                     >
@@ -437,7 +525,7 @@ const LMSPage = () => {
                   ) : (
                     <button
                       type="button"
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-blue-700"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                       onClick={submitUpdate}
                       disabled={isUpdating}
                     >
@@ -450,93 +538,214 @@ const LMSPage = () => {
           </ModalShell>
         )}
 
-        {/* TABLE (same design, only your fields) */}
-        <div className="mt-4 w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full table-fixed">
-            <thead>
-              <tr className="bg-gray-100 text-gray-800 text-sm">
-                <th className="p-3 text-left w-[12%]">Class Name</th>
-                <th className="p-3 text-left w-[8%]">Grade</th>
-                <th className="p-3 text-left w-[10%]">Subject</th>
-                <th className="p-3 text-left w-[12%]">Teacher Name</th>
-                <th className="p-3 text-left w-[10%]">YouTube Link</th>
-                <th className="p-3 text-left w-[12%]">Lesson Name</th>
-                <th className="p-3 text-left w-[16%]">Description</th>
-                <th className="p-3 text-left w-[10%]">Date</th>
-                <th className="p-3 text-left w-[6%]">Time</th>
-                <th className="p-3 text-center w-[10%]">Operation</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {lessonsLoading ? (
-                <tr>
-                  <td colSpan={10} className="p-6 text-center text-gray-500">
-                    Loading...
-                  </td>
+        {/* TABLE */}
+        <div className="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[1300px] table-fixed border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[#F8FAFC] text-left text-[13px] font-medium text-gray-600">
+                  <th className="w-[12%] border-b border-r border-gray-200 px-4 py-3">
+                    Class Name
+                  </th>
+                  <th className="w-[8%] border-b border-r border-gray-200 px-4 py-3">
+                    Grade
+                  </th>
+                  <th className="w-[10%] border-b border-r border-gray-200 px-4 py-3">
+                    Subject
+                  </th>
+                  <th className="w-[12%] border-b border-r border-gray-200 px-4 py-3">
+                    Teacher Name
+                  </th>
+                  <th className="w-[10%] border-b border-r border-gray-200 px-4 py-3">
+                    YouTube Link
+                  </th>
+                  <th className="w-[12%] border-b border-r border-gray-200 px-4 py-3">
+                    Lesson Name
+                  </th>
+                  <th className="w-[16%] border-b border-r border-gray-200 px-4 py-3">
+                    Description
+                  </th>
+                  <th className="w-[10%] border-b border-r border-gray-200 px-4 py-3">
+                    Date
+                  </th>
+                  <th className="w-[6%] border-b border-r border-gray-200 px-4 py-3">
+                    Time
+                  </th>
+                  <th className="w-[10%] border-b border-gray-200 px-4 py-3 text-center">
+                    Operation
+                  </th>
                 </tr>
-              ) : lessonsError ? (
-                <tr>
-                  <td colSpan={10} className="p-6 text-center text-red-600">
-                    Failed to load lessons
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="p-6 text-center text-gray-500">
-                    No LMS records found
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r) => (
-                  <tr key={r._id} className="border-t text-sm">
-                    <td className="p-3 truncate">{r.className}</td>
-                    <td className="p-3 truncate">{r.grade}</td>
-                    <td className="p-3 truncate">{r.subject}</td>
-                    <td className="p-3 truncate">{r.teacher}</td>
+              </thead>
 
-                    <td className="p-3 truncate">
-                      {r.youtubeUrl ? (
-                        <a
-                          href={r.youtubeUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-700 font-bold hover:underline"
-                        >
-                          Open Link
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-
-                    <td className="p-3 truncate">{r.lessonName}</td>
-                    <td className="p-3 truncate">{r.description}</td>
-                    <td className="p-3 truncate">{r.date}</td>
-                    <td className="p-3 truncate">{r.time}</td>
-
-                    <td className="p-3">
-                      <div className="flex justify-center gap-2 flex-wrap">
-                        <button
-                          className="rounded-lg bg-blue-600 px-3 py-1 text-white text-xs font-bold hover:bg-blue-700"
-                          onClick={() => openEdit(r.raw)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="rounded-lg bg-red-600 px-3 py-1 text-white text-xs font-bold hover:bg-red-700"
-                          onClick={() => onDelete(r._id)}
-                          disabled={isDeleting}
-                        >
-                          Delete
-                        </button>
-                      </div>
+              <tbody className="bg-white text-sm text-gray-700">
+                {lessonsLoading ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                      Loading...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : lessonsError ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-8 text-center text-red-600">
+                      Failed to load lessons
+                    </td>
+                  </tr>
+                ) : totalRows === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                      No lesson records found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRows.map((r) => (
+                    <tr key={r._id} className="hover:bg-gray-50/70">
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate font-medium text-gray-800">
+                          {r.className}
+                        </div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.grade}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.subject}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.teacher}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        {r.youtubeUrl ? (
+                          <a
+                            href={r.youtubeUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="truncate font-medium text-blue-600 hover:underline"
+                          >
+                            Open Link
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.lessonName}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.description}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.date}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.time}</div>
+                      </td>
+
+                      <td className="border-b border-gray-200 px-4 py-4 align-middle">
+                        <div className="flex items-center justify-center gap-2">
+                          <IconButton
+                            title="Edit"
+                            onClick={() => openEdit(r.raw)}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
+                          </IconButton>
+
+                          <IconButton
+                            title="Delete"
+                            onClick={() => onDelete(r._id)}
+                            disabled={isDeleting}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {startRecord} to {endRecord} of {totalRows}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goToFirstPage}
+                disabled={currentPage === 1 || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {"<<"}
+              </button>
+
+              <button
+                type="button"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1 || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {"<"}
+              </button>
+
+              <span className="px-2 text-sm font-medium text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {">"}
+              </button>
+
+              <button
+                type="button"
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {">>"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 // src/pages/Teacher.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useGetTeachersQuery,
   useGetTeacherFormDataQuery,
@@ -7,6 +8,7 @@ import {
 } from "../api/teacherAssignmentApi";
 
 const TeacherPage = () => {
+  const navigate = useNavigate();
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [gradeId, setGradeId] = useState("");
   const [streamId, setStreamId] = useState("");
@@ -111,177 +113,213 @@ const TeacherPage = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#F7F6F6] px-3 py-6">
-      {/* PAGE TITLE (TOP) */}
-      <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center mb-8">
-        Teachers Assign the Subjects
-      </h1>
+    <div className="flex min-h-screen w-full items-center justify-center px-3 py-6">
+      <div className="w-full max-w-5xl">
+        {/* PAGE TITLE */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Teacher Assignment Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Assign grades, streams, and subjects to teachers.
+            </p>
+          </div>
 
-      {/* CARD CENTER ONLY */}
-      <div className="w-full flex justify-center">
-        <div className="w-full max-w-xl bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-          <form className="space-y-4" onSubmit={onSubmit}>
-            {/* Teachers name (SELECT) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Teachers name
-              </label>
+          <button
+            type="button"
+            onClick={() => navigate("/home")}
+            className="inline-flex h-10 w-10 items-center justify-center self-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 sm:self-auto"
+            title="Home"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+          </button>
+        </div>
 
-              <div className="flex gap-2">
-                <select
-                  value={selectedTeacherId}
-                  onChange={(e) => setSelectedTeacherId(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="">
-                    {teachersLoading ? "Loading..." : "Select"}
-                  </option>
-                  {teachers.map((t) => (
-                    <option key={t._id} value={t._id}>
-                      {t.name}
+        {/* FORM */}
+        <div className="border border-gray-200 bg-white p-4 sm:p-6">
+          <form className="space-y-5" onSubmit={onSubmit}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {/* Teachers name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Teacher Name
+                </label>
+
+                <div className="mt-2 flex gap-2">
+                  <select
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="">
+                      {teachersLoading ? "Loading..." : "Select Teacher"}
                     </option>
-                  ))}
-                </select>
+                    {teachers.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
 
-                <button
-                  type="button"
-                  onClick={refetchTeachers}
-                  className="rounded-xl px-4 py-2 text-sm font-extrabold bg-gray-100 hover:bg-gray-200"
-                >
-                  Refresh
-                </button>
+                  <button
+                    type="button"
+                    onClick={refetchTeachers}
+                    className="rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {teachersError && (
+                  <div className="mt-2 text-xs text-red-600">
+                    {String(
+                      teachersErrObj?.data?.message ||
+                        teachersErrObj?.error ||
+                        "Failed"
+                    )}
+                  </div>
+                )}
               </div>
 
-              {teachersError && (
-                <div className="mt-2 text-sm text-red-600 font-bold">
-                  {String(teachersErrObj?.data?.message || teachersErrObj?.error || "Failed")}
-                </div>
-              )}
-            </div>
-
-            {/* Email (AUTO) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={teacher?.email || ""}
-                readOnly
-                placeholder={formLoading ? "Loading..." : "Auto fill"}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
-              />
-              {formError && (
-                <div className="mt-2 text-sm text-red-600 font-bold">
-                  {String(formErrObj?.data?.message || formErrObj?.error || "Failed")}
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={refetchForm}
-                      className="rounded-xl px-4 py-2 text-sm font-extrabold bg-gray-100 hover:bg-gray-200"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* WhatsApp (AUTO) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                WhatsApp
-              </label>
-              <input
-                type="text"
-                value={teacher?.whatsapp || teacher?.phonenumber || ""}
-                readOnly
-                placeholder={formLoading ? "Loading..." : "Auto fill"}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
-              />
-            </div>
-
-            {/* Available grade (FROM DB) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Available grade
-              </label>
-              <select
-                value={gradeId}
-                onChange={(e) => setGradeId(e.target.value)}
-                disabled={!selectedTeacherId || formLoading}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50"
-              >
-                <option value="">
-                  {!selectedTeacherId ? "Select teacher first" : "Select"}
-                </option>
-                {availableGrades.map((g) => (
-                  <option key={g._id} value={g._id}>
-                    Grade {g.grade}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Stream (ONLY grade 12/13) */}
-            {is12or13 && (
+              {/* Email */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Stream
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={teacher?.email || ""}
+                  readOnly
+                  placeholder={formLoading ? "Loading..." : "Auto fill"}
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm outline-none"
+                />
+                {formError && (
+                  <div className="mt-2 text-xs text-red-600">
+                    {String(
+                      formErrObj?.data?.message || formErrObj?.error || "Failed"
+                    )}
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={refetchForm}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* WhatsApp */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={teacher?.whatsapp || teacher?.phonenumber || ""}
+                  readOnly
+                  placeholder={formLoading ? "Loading..." : "Auto fill"}
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm outline-none"
+                />
+              </div>
+
+              {/* Available grade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Available Grade
                 </label>
                 <select
-                  value={streamId}
-                  onChange={(e) => setStreamId(e.target.value)}
-                  disabled={!gradeId}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50"
+                  value={gradeId}
+                  onChange={(e) => setGradeId(e.target.value)}
+                  disabled={!selectedTeacherId || formLoading}
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-50"
                 >
-                  <option value="">Select</option>
-                  {streams.map((st) => (
-                    <option key={st._id} value={st._id}>
-                      {st.stream}
+                  <option value="">
+                    {!selectedTeacherId ? "Select teacher first" : "Select Grade"}
+                  </option>
+                  {availableGrades.map((g) => (
+                    <option key={g._id} value={g._id}>
+                      Grade {g.grade}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {/* Available subjects (FROM DB) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Available subjects
-              </label>
-              <select
-                value={subjectId}
-                onChange={(e) => setSubjectId(e.target.value)}
-                disabled={!gradeId || (is12or13 && !streamId)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50"
-              >
-                <option value="">Select</option>
-                {subjects.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.subject}
-                  </option>
-                ))}
-              </select>
+              {/* Stream */}
+              {is12or13 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Stream
+                  </label>
+                  <select
+                    value={streamId}
+                    onChange={(e) => setStreamId(e.target.value)}
+                    disabled={!gradeId}
+                    className="mt-2 h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-50"
+                  >
+                    <option value="">Select Stream</option>
+                    {streams.map((st) => (
+                      <option key={st._id} value={st._id}>
+                        {st.stream}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Available subjects */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Available Subjects
+                </label>
+                <select
+                  value={subjectId}
+                  onChange={(e) => setSubjectId(e.target.value)}
+                  disabled={!gradeId || (is12or13 && !streamId)}
+                  className="mt-2 h-10 w-full rounded-lg border border-gray-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-50"
+                >
+                  <option value="">Select Subject</option>
+                  {subjects.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.subject}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* SUBMIT */}
-            <div className="pt-3">
-              <button
-                type="submit"
-                disabled={assigning}
-                className="w-full rounded-xl bg-blue-700 px-4 py-2 text-white font-extrabold hover:bg-blue-800 transition disabled:opacity-60"
-              >
-                {assigning ? "Submitting..." : "Submit"}
-              </button>
-            </div>
-
-            {/* small info */}
+            {/* INFO */}
             {selectedTeacherId && (
-              <div className="text-xs text-gray-500 pt-1">
+              <div className="text-center text-xs text-gray-500">
                 Grade 1–11: subjects from grade • Grade 12–13: select stream then subjects
               </div>
             )}
+
+            {/* SUBMIT */}
+            <div className="flex justify-center pt-2">
+              <button
+                type="submit"
+                disabled={assigning}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-8 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                {assigning ? "Submitting..." : "Assign Teacher"}
+              </button>
+            </div>
           </form>
         </div>
       </div>

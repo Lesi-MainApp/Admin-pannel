@@ -1,3 +1,4 @@
+// src/pages/class.page.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -12,6 +13,8 @@ import {
 import { useGetGradesQuery } from "../api/gradeSubjectApi";
 import { useGetTeachersQuery } from "../api/teacherAssignmentApi";
 
+const ROWS_PER_PAGE = 20;
+
 const ModalShell = ({ title, onClose, children }) => {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
@@ -21,12 +24,12 @@ const ModalShell = ({ title, onClose, children }) => {
         role="button"
         tabIndex={-1}
       />
-      <div className="relative w-[95vw] max-w-[720px] bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
-          <div className="font-extrabold text-blue-800">{title}</div>
+      <div className="relative w-[95vw] max-w-[720px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-[#F8FAFC] px-4 py-4 sm:px-6">
+          <div className="text-base font-semibold text-gray-800">{title}</div>
           <button
             type="button"
-            className="rounded-lg bg-gray-700 px-3 py-1 text-white text-xs font-bold hover:bg-gray-800"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
             onClick={onClose}
           >
             Close
@@ -38,6 +41,20 @@ const ModalShell = ({ title, onClose, children }) => {
   );
 };
 
+const IconButton = ({ onClick, title, children, disabled = false }) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {children}
+    </button>
+  );
+};
+
 const ClassPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -45,8 +62,8 @@ const ClassPage = () => {
   const action = searchParams.get("action"); // create | view | update | null
   const classId = searchParams.get("classId");
 
-  // ✅ always navigate using pathname+search (more reliable than string)
-  const goList = () => navigate({ pathname: "/lms/class", search: "" }, { replace: true });
+  const goList = () =>
+    navigate({ pathname: "/lms/class", search: "" }, { replace: true });
 
   const openCreate = () =>
     navigate({ pathname: "/lms/class", search: "?action=create" });
@@ -71,8 +88,12 @@ const ClassPage = () => {
   const [createClass, { isLoading: isCreating }] = useCreateClassMutation();
   const [updateClass, { isLoading: isUpdating }] = useUpdateClassMutation();
 
+  // ======= pagination =======
+  const [currentPage, setCurrentPage] = useState(1);
+
   // ✅ only call details when view/update AND classId exists
-  const shouldLoadDetails = (action === "view" || action === "update") && !!classId;
+  const shouldLoadDetails =
+    (action === "view" || action === "update") && !!classId;
 
   const {
     data: classRes,
@@ -105,14 +126,18 @@ const ClassPage = () => {
   const teachers = teachersRes?.teachers || [];
 
   const grades = useMemo(() => {
-    return allGrades.filter((g) => Number(g?.grade) >= 1 && Number(g?.grade) <= 11);
+    return allGrades.filter(
+      (g) => Number(g?.grade) >= 1 && Number(g?.grade) <= 11
+    );
   }, [allGrades]);
 
   const rows = useMemo(() => {
     const list = data?.classes || [];
     return list.map((c) => {
-      const teacherName =
-        c?.teacherIds?.length > 0 ? c.teacherIds[0]?.name : "No Teacher";
+      const teacherNames =
+        c?.teacherIds?.length > 0
+          ? c.teacherIds.map((t) => t?.name).filter(Boolean).join(", ")
+          : "No Teacher";
 
       const created = c?.createdAt ? new Date(c.createdAt) : null;
       const createdDate = created ? created.toISOString().slice(0, 10) : "-";
@@ -123,13 +148,35 @@ const ClassPage = () => {
         className: c.className || "—",
         grade: c.gradeNo ? `Grade ${c.gradeNo}` : "—",
         subject: c.subjectName || "—",
-        teacherName,
+        teacherName: teacherNames,
         createdDate,
         createdTime,
         imageUrl: c.imageUrl || "",
       };
     });
   }, [data]);
+
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    return rows.slice(start, end);
+  }, [rows, currentPage]);
+
+  const startRecord = totalRows === 0 ? 0 : (currentPage - 1) * ROWS_PER_PAGE + 1;
+  const endRecord =
+    totalRows === 0 ? 0 : Math.min(currentPage * ROWS_PER_PAGE, totalRows);
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToPrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
+  const goToNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
+  const goToLastPage = () => setCurrentPage(totalPages);
 
   // ======= upload state =======
   const [uploading, setUploading] = useState(false);
@@ -138,7 +185,8 @@ const ClassPage = () => {
     const formData = new FormData();
     formData.append("image", file);
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const BACKEND_URL =
+      import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
     const token = localStorage.getItem("token") || "";
 
     const res = await fetch(`${BACKEND_URL}/api/upload/class-image`, {
@@ -236,6 +284,7 @@ const ClassPage = () => {
         imagePublicId: form.imagePublicId,
       }).unwrap();
       goList();
+      setCurrentPage(1);
     } catch (e) {
       alert(e?.data?.message || "Create failed");
     }
@@ -296,12 +345,12 @@ const ClassPage = () => {
 
     return (
       <div>
-        <label className="block text-sm font-extrabold text-gray-800">
-          Class Image (Drag & Drop)
+        <label className="block text-sm font-medium text-gray-700">
+          Class Image
         </label>
 
         <div
-          className="mt-2 w-full rounded-xl border-2 border-dashed border-gray-300 p-4 text-center cursor-pointer hover:border-blue-400"
+          className="mt-2 w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 p-4 text-center transition hover:border-blue-400"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -310,7 +359,7 @@ const ClassPage = () => {
           }}
           onClick={() => document.getElementById(inputId)?.click()}
         >
-          <div className="text-sm font-bold text-gray-700">
+          <div className="text-sm font-medium text-gray-700">
             {uploading ? "Uploading..." : "Drop image here or click to upload"}
           </div>
 
@@ -319,11 +368,13 @@ const ClassPage = () => {
               <img
                 src={form.imageUrl}
                 alt="preview"
-                className="w-16 h-16 rounded-lg object-cover border"
+                className="h-16 w-16 rounded-lg border object-cover"
               />
               <div className="text-left">
-                <div className="text-[11px] font-bold text-gray-700">Uploaded</div>
-                <div className="text-[10px] text-gray-500 break-all max-w-[320px]">
+                <div className="text-[11px] font-medium text-gray-700">
+                  Uploaded
+                </div>
+                <div className="max-w-[320px] break-all text-[10px] text-gray-500">
                   {form.imageUrl}
                 </div>
               </div>
@@ -347,93 +398,129 @@ const ClassPage = () => {
   };
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[95vw] px-3 sm:px-6 py-4 sm:py-6 min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-800 text-center">
-          Class
-        </h1>
+    <div className="flex w-full justify-center ">
+      <div className="min-w-0 w-full max-w-[95vw] px-3 py-4 sm:px-6 sm:py-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Class Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Manage classes, subjects, teachers, and class images.
+            </p>
+          </div>
 
-        <div className="mt-4 flex justify-end">
-          <button
-            type="button"
-            className="rounded-xl bg-green-600 px-4 py-2 text-white font-extrabold hover:bg-green-700 transition"
-            onClick={openCreate}
-          >
-            + Add Class
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+              onClick={openCreate}
+            >
+              + Add Class
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/home")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
+              title="Home"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5 9.5V21h14V9.5" />
+                <path d="M9 21v-6h6v6" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* VIEW MODAL */}
         {action === "view" && (
           <ModalShell title="View Class" onClose={goList}>
             {!classId ? (
-              <div className="text-red-600 font-bold">Missing classId</div>
+              <div className="text-sm text-red-600">Missing classId</div>
             ) : classLoading ? (
-              <div className="text-gray-500 font-bold">Loading...</div>
+              <div className="text-sm text-gray-500">Loading...</div>
             ) : classError ? (
-              <div className="text-red-600 font-bold">Failed to load class</div>
+              <div className="text-sm text-red-600">Failed to load class</div>
             ) : (
-              <div className="space-y-3 text-sm">
-                <div className="font-extrabold text-gray-800">
-                  Class Name:{" "}
-                  <span className="font-bold">{classRes?.class?.className}</span>
+              <div className="space-y-4 text-sm">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">
+                    Class Name
+                  </div>
+                  <div className="mt-1 text-sm text-gray-900">
+                    {classRes?.class?.className || "—"}
+                  </div>
                 </div>
 
-                <div className="font-extrabold text-gray-800">
-                  Grade:{" "}
-                  <span className="font-bold">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">Grade</div>
+                  <div className="mt-1 text-sm text-gray-900">
                     {classRes?.class?.gradeNo
                       ? `Grade ${classRes.class.gradeNo}`
                       : classRes?.class?.gradeId?.grade
                       ? `Grade ${classRes.class.gradeId.grade}`
                       : "—"}
-                  </span>
+                  </div>
                 </div>
 
-                <div className="font-extrabold text-gray-800">
-                  Subject:{" "}
-                  <span className="font-bold">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">
+                    Subject
+                  </div>
+                  <div className="mt-1 text-sm text-gray-900">
                     {classRes?.class?.subjectName || "—"}
-                  </span>
+                  </div>
                 </div>
 
-                <div className="font-extrabold text-gray-800">
-                  Teachers:{" "}
-                  <span className="font-bold">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">
+                    Teachers
+                  </div>
+                  <div className="mt-1 text-sm text-gray-900">
                     {(classRes?.class?.teacherIds || [])
                       .map((t) => t?.name)
                       .filter(Boolean)
                       .join(", ") || "No Teacher"}
-                  </span>
+                  </div>
                 </div>
 
-                <div className="font-extrabold text-gray-800">
-                  Image:{" "}
+                <div>
+                  <div className="text-sm font-medium text-gray-700">Image</div>
                   {classRes?.class?.imageUrl ? (
                     <div className="mt-2 flex items-center gap-3">
                       <img
                         src={classRes.class.imageUrl}
                         alt="class"
-                        className="w-16 h-16 rounded-lg object-cover border"
+                        className="h-16 w-16 rounded-lg border object-cover"
                       />
                       <a
                         href={classRes.class.imageUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[11px] text-blue-700 underline break-all"
+                        className="break-all text-[11px] text-blue-600 underline"
                       >
                         {classRes.class.imageUrl}
                       </a>
                     </div>
                   ) : (
-                    <span className="text-gray-400">No image</span>
+                    <div className="mt-1 text-sm text-gray-400">No image</div>
                   )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-blue-700"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     onClick={() => openUpdate(classId)}
                   >
                     Update
@@ -448,23 +535,23 @@ const ClassPage = () => {
         {action === "update" && (
           <ModalShell title="Update Class" onClose={goList}>
             {!classId ? (
-              <div className="text-red-600 font-bold">Missing classId</div>
+              <div className="text-sm text-red-600">Missing classId</div>
             ) : classLoading || gradesLoading || teachersLoading ? (
-              <div className="text-gray-500 font-bold">Loading...</div>
+              <div className="text-sm text-gray-500">Loading...</div>
             ) : classError ? (
-              <div className="text-red-600 font-bold">Failed to load class</div>
+              <div className="text-sm text-red-600">Failed to load class</div>
             ) : gradesError ? (
-              <div className="text-red-600 font-bold">Failed to load grades</div>
+              <div className="text-sm text-red-600">Failed to load grades</div>
             ) : teachersError ? (
-              <div className="text-red-600 font-bold">Failed to load teachers</div>
+              <div className="text-sm text-red-600">Failed to load teachers</div>
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Class Name
                   </label>
                   <input
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.className}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, className: e.target.value }))
@@ -473,11 +560,11 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Grade
                   </label>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.gradeId}
                     onChange={(e) =>
                       setForm((p) => ({
@@ -497,11 +584,11 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Subject
                   </label>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.subjectId}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, subjectId: e.target.value }))
@@ -520,12 +607,12 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Teachers
                   </label>
                   <select
                     multiple
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 min-h-[120px]"
+                    className="mt-2 min-h-[120px] w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.teacherIds}
                     onChange={(e) => {
                       const values = Array.from(e.target.selectedOptions).map(
@@ -540,17 +627,17 @@ const ClassPage = () => {
                       </option>
                     ))}
                   </select>
-                  <div className="mt-1 text-[11px] text-gray-500 font-bold">
-                    (Hold Ctrl / Cmd to select multiple)
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    Hold Ctrl / Cmd to select multiple
                   </div>
                 </div>
 
                 <ImageUploader inputId="class-image-input-update" />
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    className="rounded-lg bg-gray-700 px-4 py-2 text-white text-sm font-extrabold hover:bg-gray-800"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                     onClick={goList}
                   >
                     Cancel
@@ -558,11 +645,15 @@ const ClassPage = () => {
 
                   <button
                     type="button"
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-blue-700"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     onClick={submitUpdate}
                     disabled={isUpdating || uploading}
                   >
-                    {uploading ? "Uploading..." : isUpdating ? "Updating..." : "Update"}
+                    {uploading
+                      ? "Uploading..."
+                      : isUpdating
+                      ? "Updating..."
+                      : "Update"}
                   </button>
                 </div>
               </div>
@@ -574,20 +665,19 @@ const ClassPage = () => {
         {action === "create" && (
           <ModalShell title="Create Class" onClose={goList}>
             {gradesLoading || teachersLoading ? (
-              <div className="text-gray-500 font-bold">Loading...</div>
+              <div className="text-sm text-gray-500">Loading...</div>
             ) : gradesError ? (
-              <div className="text-red-600 font-bold">Failed to load grades</div>
+              <div className="text-sm text-red-600">Failed to load grades</div>
             ) : teachersError ? (
-              <div className="text-red-600 font-bold">Failed to load teachers</div>
+              <div className="text-sm text-red-600">Failed to load teachers</div>
             ) : (
               <div className="space-y-4">
-                {/* same create form as before */}
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Class Name
                   </label>
                   <input
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.className}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, className: e.target.value }))
@@ -597,11 +687,11 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Grade
                   </label>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.gradeId}
                     onChange={(e) =>
                       setForm((p) => ({
@@ -621,11 +711,11 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Subject
                   </label>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300"
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.subjectId}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, subjectId: e.target.value }))
@@ -644,12 +734,12 @@ const ClassPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-extrabold text-gray-800">
+                  <label className="block text-sm font-medium text-gray-700">
                     Teachers
                   </label>
                   <select
                     multiple
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 min-h-[120px]"
+                    className="mt-2 min-h-[120px] w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-300"
                     value={form.teacherIds}
                     onChange={(e) => {
                       const values = Array.from(e.target.selectedOptions).map(
@@ -664,14 +754,17 @@ const ClassPage = () => {
                       </option>
                     ))}
                   </select>
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    Hold Ctrl / Cmd to select multiple
+                  </div>
                 </div>
 
                 <ImageUploader inputId="class-image-input-create" />
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    className="rounded-lg bg-gray-700 px-4 py-2 text-white text-sm font-extrabold hover:bg-gray-800"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                     onClick={goList}
                   >
                     Cancel
@@ -679,11 +772,15 @@ const ClassPage = () => {
 
                   <button
                     type="button"
-                    className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-extrabold hover:bg-green-700"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     onClick={submitCreate}
                     disabled={isCreating || uploading}
                   >
-                    {uploading ? "Uploading..." : isCreating ? "Creating..." : "Create"}
+                    {uploading
+                      ? "Uploading..."
+                      : isCreating
+                      ? "Creating..."
+                      : "Create"}
                   </button>
                 </div>
               </div>
@@ -692,98 +789,216 @@ const ClassPage = () => {
         )}
 
         {/* TABLE */}
-        <div className="mt-4 w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full table-fixed">
-            <thead>
-              <tr className="bg-gray-100 text-gray-800 text-sm">
-                <th className="p-3 text-left w-[16%]">Class Name</th>
-                <th className="p-3 text-left w-[10%]">Grade</th>
-                <th className="p-3 text-left w-[14%]">Subject</th>
-                <th className="p-3 text-left w-[16%]">Teacher Name</th>
-                <th className="p-3 text-left w-[16%]">Image</th>
-                <th className="p-3 text-left w-[12%]">Created Date</th>
-                <th className="p-3 text-left w-[8%]">Time</th>
-                <th className="p-3 text-center w-[8%]">Operation</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500">
-                    Loading...
-                  </td>
+        <div className="mt-5 overflow-hidden border border-gray-200 bg-white">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[1200px] table-fixed border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[#F8FAFC] text-left text-[13px] font-medium text-gray-600">
+                  <th className="w-[16%] border-b border-r border-gray-200 px-4 py-3">
+                    Class Name
+                  </th>
+                  <th className="w-[10%] border-b border-r border-gray-200 px-4 py-3">
+                    Grade
+                  </th>
+                  <th className="w-[14%] border-b border-r border-gray-200 px-4 py-3">
+                    Subject
+                  </th>
+                  <th className="w-[18%] border-b border-r border-gray-200 px-4 py-3">
+                    Teacher Name
+                  </th>
+                  <th className="w-[12%] border-b border-r border-gray-200 px-4 py-3">
+                    Image
+                  </th>
+                  <th className="w-[12%] border-b border-r border-gray-200 px-4 py-3">
+                    Created Date
+                  </th>
+                  <th className="w-[8%] border-b border-r border-gray-200 px-4 py-3">
+                    Time
+                  </th>
+                  <th className="w-[10%] border-b border-gray-200 px-4 py-3 text-center">
+                    Operation
+                  </th>
                 </tr>
-              ) : isError ? (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-red-600">
-                    Failed to load classes
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500">
-                    No class records found
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r) => (
-                  <tr key={r._id} className="border-t text-sm">
-                    <td className="p-3 truncate font-semibold">{r.className}</td>
-                    <td className="p-3 truncate">{r.grade}</td>
-                    <td className="p-3 truncate">{r.subject}</td>
-                    <td className="p-3 truncate">{r.teacherName}</td>
+              </thead>
 
-                    <td className="p-3">
-                      {r.imageUrl ? (
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={r.imageUrl}
-                            alt="class"
-                            className="w-10 h-10 rounded-lg object-cover border"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">No image</span>
-                      )}
-                    </td>
-
-                    <td className="p-3 truncate">{r.createdDate}</td>
-                    <td className="p-3 truncate">{r.createdTime}</td>
-
-                    <td className="p-3">
-                      <div className="flex justify-center gap-2 whitespace-nowrap">
-                        <button
-                          type="button"
-                          className="rounded-lg bg-indigo-600 px-3 py-1 text-white text-xs font-bold hover:bg-indigo-700"
-                          onClick={() => openView(r._id)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="rounded-lg bg-blue-600 px-3 py-1 text-white text-xs font-bold hover:bg-blue-700"
-                          onClick={() => openUpdate(r._id)}
-                        >
-                          Update
-                        </button>
-
-                        <button
-                          type="button"
-                          className="rounded-lg bg-red-600 px-3 py-1 text-white text-xs font-bold hover:bg-red-700"
-                          onClick={() => onDelete(r._id)}
-                          disabled={isDeleting}
-                        >
-                          Delete
-                        </button>
-                      </div>
+              <tbody className="bg-white text-sm text-gray-700">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      Loading...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-red-600">
+                      Failed to load classes
+                    </td>
+                  </tr>
+                ) : totalRows === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      No class records found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRows.map((r) => (
+                    <tr key={r._id} className="hover:bg-gray-50/70">
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate font-medium text-gray-800">
+                          {r.className}
+                        </div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.grade}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.subject}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.teacherName}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        {r.imageUrl ? (
+                          <div className="flex items-center">
+                            <img
+                              src={r.imageUrl}
+                              alt="class"
+                              className="h-10 w-10 rounded-lg border object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">No image</span>
+                        )}
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.createdDate}</div>
+                      </td>
+
+                      <td className="border-b border-r border-gray-200 px-4 py-4 align-middle">
+                        <div className="truncate">{r.createdTime}</div>
+                      </td>
+
+                      <td className="border-b border-gray-200 px-4 py-4 align-middle">
+                        <div className="flex items-center justify-center gap-2">
+                          <IconButton
+                            title="View"
+                            onClick={() => openView(r._id)}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </IconButton>
+
+                          <IconButton
+                            title="Update"
+                            onClick={() => openUpdate(r._id)}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
+                          </IconButton>
+
+                          <IconButton
+                            title="Delete"
+                            onClick={() => onDelete(r._id)}
+                            disabled={isDeleting}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {startRecord} to {endRecord} of {totalRows}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goToFirstPage}
+                disabled={currentPage === 1 || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {"<<"}
+              </button>
+
+              <button
+                type="button"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1 || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {"<"}
+              </button>
+
+              <span className="px-2 text-sm font-medium text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {">"}
+              </button>
+
+              <button
+                type="button"
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages || totalRows === 0}
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-gray-200 px-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {">>"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
