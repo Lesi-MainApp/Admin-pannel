@@ -7,6 +7,7 @@ import papers from "../assets/papers.png";
 import student from "../assets/student.png";
 import teacher from "../assets/teacher.png";
 import subject from "../assets/subject.png";
+import result from "../assets/result.png";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const HomePage = () => {
     { img: lms, title: "LMS", to: "/lms" },
     { img: teacher, title: "Teacher", to: "/teacher" },
     { img: subject, title: "Grade & Subjects", to: "/grade-subject" },
+    { img: result, title: "Result", to: "/result" },
   ];
 
   const Card = ({ img, title, to }) => (

@@ -16,6 +16,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 // main pages
 import HomePage from "./pages/home.page";
 import GradeSubjectPage from "./pages/Grade.Subject.page";
+import Result from "./pages/Result.page";
 
 // paper module
 import PaperLayout from "./layout/PaperLayout";
@@ -76,6 +77,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           />
 
           <Route
+            path="/result"
+            element={
+              <ProtectedRoute>
+                <Result />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/student"
             element={
               <ProtectedRoute>
@@ -106,8 +116,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={<Navigate to="/paper/papers" replace />} />
             <Route path="papers" element={<PapersPage />} />
             <Route path="view" element={<ViewPaperPage />} />
-            <Route path=":paperId/questions/create" element={<CreatePaperQuestionsPage />} />
-            <Route path=":paperId/questions/view" element={<ViewPaperQuestionsPage />} />
+            <Route
+              path=":paperId/questions/create"
+              element={<CreatePaperQuestionsPage />}
+            />
+            <Route
+              path=":paperId/questions/view"
+              element={<ViewPaperQuestionsPage />}
+            />
             <Route path="question" element={<QuestionPage />} />
           </Route>
 
@@ -160,7 +176,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             />
           </Route>
 
-         
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

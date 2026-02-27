@@ -8,7 +8,6 @@ const initialState = {
     level: "",
     grade: "",
     classId: "",
-    completedCount: "",
     page: 1,
     limit: 20,
   },
@@ -19,10 +18,22 @@ const studentSlice = createSlice({
   initialState,
   reducers: {
     setStudentFilters: (state, action) => {
-      state.filters = { ...state.filters, ...(action.payload || {}) };
+      state.filters = {
+        ...state.filters,
+        ...(action.payload || {}),
+      };
     },
     resetStudentFilters: (state) => {
-      state.filters = { ...initialState.filters };
+      state.filters = {
+        status: "",
+        email: "",
+        district: "",
+        level: "",
+        grade: "",
+        classId: "",
+        page: 1,
+        limit: 20,
+      };
     },
   },
 });

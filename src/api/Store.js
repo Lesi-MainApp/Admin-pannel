@@ -32,9 +32,11 @@ import { questionApi } from "./questionApi";
 
 import { uploadApi } from "./uploadApi";
 
-// ✅ STUDENT (from src/api)
-import studentReducer from "../api/features/studentSlice";
-import { studentApi } from "../api/studentApi";
+import studentReducer from "./features/studentSlice";
+import { studentApi } from "./studentApi";
+
+// ✅ NEW
+import { adminResultReportApi } from "./adminResultReportApi";
 
 export const store = configureStore({
   reducer: {
@@ -45,11 +47,8 @@ export const store = configureStore({
     lessonUi: lessonUiReducer,
     enrollUi: enrollUiReducer,
     liveUi: liveUiReducer,
-
     paper: paperReducer,
     questionUi: questionUiReducer,
-
-    // ✅ student filter state
     student: studentReducer,
 
     [authApi.reducerPath]: authApi.reducer,
@@ -60,13 +59,13 @@ export const store = configureStore({
     [lessonApi.reducerPath]: lessonApi.reducer,
     [enrollApi.reducerPath]: enrollApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
-
     [paperApi.reducerPath]: paperApi.reducer,
     [questionApi.reducerPath]: questionApi.reducer,
     [uploadApi.reducerPath]: uploadApi.reducer,
-
-    // ✅ student api
     [studentApi.reducerPath]: studentApi.reducer,
+
+    // ✅ NEW
+    [adminResultReportApi.reducerPath]: adminResultReportApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -81,9 +80,10 @@ export const store = configureStore({
       paperApi.middleware,
       questionApi.middleware,
       uploadApi.middleware,
+      studentApi.middleware,
 
-      // ✅ student middleware
-      studentApi.middleware
+      // ✅ NEW
+      adminResultReportApi.middleware
     ),
 });
 

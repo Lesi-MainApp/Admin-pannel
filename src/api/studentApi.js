@@ -13,68 +13,52 @@ export const studentApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Students", "Student", "StudentOptions"],
+  tagTypes: ["Students"],
   endpoints: (builder) => ({
     getStudentOptions: builder.query({
-      query: () => ({ url: "options", method: "GET" }),
-      providesTags: ["StudentOptions"],
+      query: () => ({
+        url: "/options",
+        method: "GET",
+      }),
     }),
 
-    // ✅ params empty => GET ALL STUDENTS
     getStudents: builder.query({
       query: (params = {}) => {
-        const qs = new URLSearchParams();
-        Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && String(v).trim() !== "") qs.set(k, v);
-        });
-        const q = qs.toString();
-        return { url: q ? `?${q}` : "", method: "GET" };
+        const search = new URLSearchParams();
+
+        if (params.status) search.set("status", params.status);
+        if (params.email) search.set("email", params.email);
+        if (params.district) search.set("district", params.district);
+        if (params.level) search.set("level", params.level);
+        if (params.grade) search.set("grade", params.grade);
+        if (params.classId) search.set("classId", params.classId);
+        if (params.page) search.set("page", String(params.page));
+        if (params.limit) search.set("limit", String(params.limit));
+
+        const queryString = search.toString();
+
+        return {
+          url: queryString ? `/?${queryString}` : "/",
+          method: "GET",
+        };
       },
-      providesTags: (res) =>
-        res?.rows
-          ? [
-              { type: "Students", id: "LIST" },
-              ...res.rows.map((s) => ({ type: "Student", id: s._id })),
-            ]
-          : [{ type: "Students", id: "LIST" }],
-    }),
-
-    getStudentById: builder.query({
-      query: (id) => ({ url: `${id}`, method: "GET" }),
-      providesTags: (res, err, id) => [{ type: "Student", id }],
-    }),
-
-    updateStudent: builder.mutation({
-      query: ({ id, body }) => ({
-        url: `${id}`,
-        method: "PUT",
-        body,
-      }),
-      invalidatesTags: (res, err, arg) => [
-        { type: "Student", id: arg?.id },
-        { type: "Students", id: "LIST" },
-      ],
+      providesTags: ["Students"],
     }),
 
     banStudent: builder.mutation({
-      query: (id) => ({ url: `${id}/ban`, method: "PATCH" }),
-      invalidatesTags: (res, err, id) => [
-        { type: "Student", id },
-        { type: "Students", id: "LIST" },
-      ],
+      query: (id) => ({
+        url: `/${id}/ban`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Students"],
     }),
 
     unbanStudent: builder.mutation({
-      query: (id) => ({ url: `${id}/unban`, method: "PATCH" }),
-      invalidatesTags: (res, err, id) => [
-        { type: "Student", id },
-        { type: "Students", id: "LIST" },
-      ],
-    }),
-
-    deleteStudent: builder.mutation({
-      query: (id) => ({ url: `${id}`, method: "DELETE" }),
-      invalidatesTags: [{ type: "Students", id: "LIST" }],
+      query: (id) => ({
+        url: `/${id}/unban`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Students"],
     }),
   }),
 });
@@ -82,9 +66,6 @@ export const studentApi = createApi({
 export const {
   useGetStudentOptionsQuery,
   useGetStudentsQuery,
-  useGetStudentByIdQuery,
-  useUpdateStudentMutation,
   useBanStudentMutation,
   useUnbanStudentMutation,
-  useDeleteStudentMutation,
 } = studentApi;
