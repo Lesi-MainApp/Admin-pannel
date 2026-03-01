@@ -259,36 +259,29 @@ const Result = () => {
           {/* Table */}
           <div className="mt-5 overflow-hidden border border-gray-200 bg-white">
             <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0">
+              <table className="w-full min-w-[1250px] table-fixed border-separate border-spacing-0">
                 <thead>
                   <tr>
-                    <Th className="w-[26%]">Student Name</Th>
-                    <Th className="w-[16%]">Grade</Th>
-                    <Th className="w-[20%] text-center">Subjects</Th>
-                    <Th className="w-[18%]">Completed Paper Count</Th>
-                    <Th className="w-[20%] border-r-0 text-center">View Report</Th>
+                    <Th className="w-[22%]">Student Name</Th>
+                    <Th className="w-[14%]">Grade</Th>
+                    <Th className="w-[12%] text-center">Island Rank</Th>
+                    <Th className="w-[18%] text-center">Subjects</Th>
+                    <Th className="w-[16%]">Completed Paper Count</Th>
+                    <Th className="w-[18%] border-r-0 text-center">View Report</Th>
                   </tr>
                 </thead>
 
                 <tbody className="bg-white">
                   {isLoading || isFetching ? (
                     <tr>
-                      <td
-                        className="px-6 py-10 text-center text-gray-500"
-                        colSpan={5}
-                      >
+                      <td className="px-6 py-10 text-center text-gray-500" colSpan={6}>
                         Loading results...
                       </td>
                     </tr>
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td
-                        className="px-6 py-10 text-center text-gray-500"
-                        colSpan={5}
-                      >
-                        {subject
-                          ? "No results found"
-                          : "Please first choose subject"}
+                      <td className="px-6 py-10 text-center text-gray-500" colSpan={6}>
+                        {subject ? "No results found" : "Please first choose subject"}
                       </td>
                     </tr>
                   ) : (
@@ -299,6 +292,10 @@ const Result = () => {
                         </Td>
 
                         <Td className="truncate">{r.grade || "-"}</Td>
+
+                        <Td className="text-center font-semibold">
+                          {r.islandRank || "-"}
+                        </Td>
 
                         <Td className="text-center">
                           <button
@@ -345,9 +342,7 @@ const Result = () => {
           <div className="w-full max-w-lg border border-gray-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Subjects
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900">Subjects</h2>
                 <p className="mt-1 text-sm text-gray-500">
                   {selectedSubjectRow.studentName}
                 </p>
@@ -477,10 +472,7 @@ const Result = () => {
                       ))
                     ) : (
                       <tr>
-                        <td
-                          className="px-3 py-6 text-[12px] text-gray-500"
-                          colSpan={4}
-                        >
+                        <td className="px-3 py-6 text-[12px] text-gray-500" colSpan={4}>
                           No result details found
                         </td>
                       </tr>
