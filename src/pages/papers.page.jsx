@@ -23,7 +23,7 @@ const PapersPage = () => {
     enums?.paperTypes || ["Daily Quiz", "Topic wise paper", "Model paper", "Past paper"];
   const paymentTypes = enums?.paymentTypes || ["free", "paid", "practise"];
   const attemptsAllowed = enums?.attemptsAllowed || [1, 2, 3];
-  const answerCounts = useMemo(() => [1, 2, 3, 4, 5, 6], []);
+  const answerCounts = useMemo(() => [2, 3, 4, 5, 6], []);
 
   const [form, setForm] = useState({
     gradeId: "",
